@@ -9,7 +9,7 @@ src bram_sdp.vhd
 src ultra_buffer.vhd
 src ultra_constants.vhd
 src ultra_data_types.vhd
-src null_algo.vhd
 src dummy_blinker.vhd
+include algo.dep
 src top.vhd
 setup build.tcl

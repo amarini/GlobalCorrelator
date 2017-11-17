@@ -6,6 +6,9 @@ use work.ultra_data_types.all;
 use work.ultra_constants.all;
 use work.board_constants.all;
 
+use work.pftm_data_types.all;
+use work.pftm_constants.all;
+
 entity ultra_null_algo is
     port (
        clk : in std_logic;
@@ -16,124 +19,89 @@ entity ultra_null_algo is
 end ultra_null_algo;
 
 architecture behavioral of ultra_null_algo is
-    constant N_QQUADS : natural := (N_QUADS+3)/4;
-    subtype int16 is signed(15 downto 0);
-    type vint16 is array (natural range <>) of int16;
-    -- some buffers to help the thing meet the timing
-    signal buff_in : ndata(4*N_QUADS-1 downto 0);
-    signal buff_out : ndata(4*N_QUADS-1 downto 0);
-    signal buff_out1 : ndata(4*N_QUADS-1 downto 0);
-    signal buff_out2 : ndata(4*N_QUADS-1 downto 0);
-    -- let's do something that has some non-trivial routing
-    signal fibers_hi: vint16(4*N_QUADS-1 downto 0);
-    signal fibers_lo: vint16(4*N_QUADS-1 downto 0);
-    signal fibers_ok: std_logic_vector(4*N_QUADS-1 downto 0);
-    signal quads_hi: vint16(N_QUADS-1 downto 0);
-    signal quads_lo: vint16(N_QUADS-1 downto 0);
-    signal quads_ok: std_logic_vector(N_QUADS-1 downto 0);
-    signal qquads_hi: vint16(N_QQUADS-1 downto 0);
-    signal qquads_lo: vint16(N_QQUADS-1 downto 0);
-    signal qquads_ok: std_logic_vector(N_QQUADS-1 downto 0);
-    signal tot_hi: int16;
-    signal tot_lo: int16;
-    signal tot_ok: std_logic;
+    constant N_IN  : natural := 4*N_SECTORS;
+    constant N_OUT : natural := (N_CALO+N_EMCALO+N_TRACK);
+    signal sav_in_good : std_logic_vector(N_IN - 1 downto 0);
+    signal sav_in  : words32(N_IN - 1 downto 0);
+    signal reg_in_good : std_logic_vector(N_IN - 1 downto 0);
+    signal reg_in  : words32(N_IN - 1 downto 0);
+    signal reg_out : words32(N_OUT - 1 downto 0);
+    signal reg_out_good : std_logic_vector(N_OUT-1 downto 0);
+    signal reg_cnts  : words32(2 downto 0);
+    signal reg_bits  : words32(2 downto 0);
 begin
-    buffers: process(clk)
-    begin
-        if rising_edge(clk) then
-            buff_in <= d;
-            buff_out1 <= buff_out;
-            buff_out2 <= buff_out1;
-            q <= buff_out2;
-        end if;
-    end process buffers;
+    calo : entity work.regionizer_mp7_pipelined
+        generic map(N_OBJ_SECTOR => N_CALO_SECTOR, N_OBJ_SECTOR_ETA => N_CALO_SECTOR_ETA, N_OBJ => N_CALO, N_FIBERS_SECTOR => 1, N_FIBERS_OBJ => 1 )
+        port map(clk => clk, rst => rst, 
+                 mp7_valid => reg_in_good(1*N_SECTORS-1 downto 0*N_SECTORS), 
+                 mp7_in => reg_in(1*N_SECTORS-1 downto 0*N_SECTORS), 
+                 mp7_out  => reg_out(N_CALO-1 downto 0), 
+                 mp7_outv => reg_out_good(N_CALO-1 downto 0), 
+                 mp7_cnts => reg_cnts(0), mp7_bits => reg_bits(0));
 
-    mkf: process(clk,rst)
-    begin
-        if rst = '1' then
-            for i in 4*N_QUADS-1 downto 0 loop
-                fibers_ok(i) <= '0';
-            end loop;
-        elsif rising_edge(clk) then
-            for i in 4*N_QUADS-1 downto 0 loop
-                fibers_hi(i) <= signed(buff_in(i).data(31 downto 16));
-                fibers_lo(i) <= signed(buff_in(i).data(15 downto  0));
-                fibers_ok(i) <= buff_in(i).valid;
-            end loop;
-        end if;
-    end process;
+    emcalo : entity work.regionizer_mp7_pipelined
+        generic map(N_OBJ_SECTOR => N_EMCALO_SECTOR, N_OBJ_SECTOR_ETA => N_EMCALO_SECTOR_ETA, N_OBJ => N_EMCALO, N_FIBERS_SECTOR => 1, N_FIBERS_OBJ => 1, 
+                   SECTOR_VALID_BIT_DELAY => 4)
+        port map(clk => clk, rst => rst, 
+                 mp7_valid => reg_in_good(2*N_SECTORS-1 downto 1*N_SECTORS), 
+                 mp7_in => reg_in(2*N_SECTORS-1 downto 1*N_SECTORS), 
+                 mp7_out  => reg_out(N_CALO+N_EMCALO-1 downto N_CALO), 
+                 mp7_outv => reg_out_good(N_CALO+N_EMCALO-1 downto N_CALO), 
+                 mp7_cnts => reg_cnts(1), mp7_bits => reg_bits(1));
 
-    mkq: process(clk,rst)
-    begin
-        if rst = '1' then
-            for i in N_QUADS-1 downto 0 loop
-                quads_ok(i) <= '0';
-            end loop;
-        elsif rising_edge(clk) then
-            for i in N_QUADS-1 downto 0 loop
-                quads_hi(i) <= fibers_hi(4*i+0) + fibers_hi(4*i+1) + fibers_hi(4*i+2) + fibers_hi(4*i+3);
-                quads_lo(i) <= fibers_lo(4*i+0) + fibers_lo(4*i+1) + fibers_lo(4*i+2) + fibers_lo(4*i+3);
-                quads_ok(i) <= (fibers_ok(4*i+0) and fibers_ok(4*i+1) and fibers_ok(4*i+2) and fibers_ok(4*i+3));
-            end loop;
-        end if;
-    end process;
+    track : entity work.regionizer_mp7_pipelined
+        generic map(N_OBJ_SECTOR => N_TRACK_SECTOR, N_OBJ_SECTOR_ETA => N_TRACK_SECTOR_ETA, N_OBJ => N_TRACK, N_FIBERS_SECTOR => 2, N_FIBERS_OBJ => 1, 
+                   SECTOR_VALID_BIT_DELAY => 6 )
+        port map(clk => clk, rst => rst, 
+                 mp7_valid => reg_in_good(4*N_SECTORS-1 downto 2*N_SECTORS),  
+                 mp7_in => reg_in(4*N_SECTORS-1 downto 2*N_SECTORS), 
+                 mp7_out  => reg_out(N_CALO+N_EMCALO+N_TRACK-1 downto N_CALO+N_EMCALO), 
+                 mp7_outv => reg_out_good(N_CALO+N_EMCALO+N_TRACK-1 downto N_CALO+N_EMCALO), 
+                 mp7_cnts => reg_cnts(2), mp7_bits => reg_bits(2));
 
-    mkqq: process(clk,rst)
-        variable sum_hi, sum_lo : int16;
-        variable and_ok : std_logic;
+    -- yet another register buffer
+    get_input: process(clk)
     begin
-        if rst = '1' then
-            for i in N_QQUADS-1 downto 0 loop
-                qquads_ok(i) <= '0';
-            end loop;
-        elsif rising_edge(clk) then
-            for i in N_QQUADS-1 downto 0 loop
-                sum_hi := to_signed(0,int16'length);
-                sum_lo := to_signed(0,int16'length);
-                and_ok := '1';
-                for j in 4*i+3 downto 4*i loop
-                    if j < N_QUADS then
-                        sum_hi := sum_hi + quads_hi(j);
-                        sum_lo := sum_lo + quads_lo(j);
-                        and_ok := and_ok and quads_ok(j);
-                    end if;
-                end loop;
-                qquads_hi(i) <= sum_hi;
-                qquads_lo(i) <= sum_lo;
-                qquads_ok(i) <= and_ok;
+        if clk'event and clk = '1' then
+            for i in N_IN-1 downto 0 loop
+                sav_in_good(i) <= d(0).valid;
+                sav_in(i) <= d(i).data;
+                reg_in_good(i) <= sav_in_good(i);
+                reg_in(i) <= sav_in(i);
             end loop;
         end if;
-    end process;
+    end process get_input;
 
-    mktot: process(clk,rst)
-        variable sum_hi, sum_lo : int16;
-        variable and_ok : std_logic;
+    -- yet another register buffer
+    get_output: process(clk)
     begin
-        if rst = '1' then
-            tot_ok <= '0';
-        elsif rising_edge(clk) then
-            sum_hi := to_signed(0,int16'length);
-            sum_lo := to_signed(0,int16'length);
-            and_ok := '1';
-            for j in N_QQUADS-1 downto 0 loop
-                sum_hi := sum_hi + qquads_hi(j);
-                sum_lo := sum_lo + qquads_lo(j);
-                and_ok := and_ok and qquads_ok(j);
+        if clk'event and clk = '1' then
+            for i in N_OUT-1 downto 0 loop
+                q(i).data <= reg_out(i);
+                q(i).valid <= reg_out_good(i);
             end loop;
-            tot_hi <= sum_hi;
-            tot_lo <= sum_lo;
-            tot_ok <= and_ok;
         end if;
-    end process;
+    end process get_output;
 
-    mko: process(clk)
+    debug_output: process(clk)
     begin
-        if rising_edge(clk) then
-            for i in 4*N_QUADS-1 downto 0 loop
-                buff_out(i).data(31 downto 16) <= std_logic_vector(tot_hi);
-                buff_out(i).data(15 downto  0) <= std_logic_vector(tot_lo);
-                buff_out(i).valid <= tot_ok;
+        if clk'event and clk = '1' then
+            for i in 0 to 2 loop
+                q(N_OUT+2*i+0).data <= reg_cnts(i);
+                q(N_OUT+2*i+0).valid <= '1';
+                q(N_OUT+2*i+1).data <= reg_bits(i);
+                q(N_OUT+2*i+1).valid <= '1';
             end loop;
         end if;
-    end process;
+    end process debug_output;
+
+    dummy_output: process(clk)
+    begin
+        if clk'event and clk = '1' then
+            for i in  4 * N_QUADS - 1 downto N_OUT+6 loop
+                q(i).data <= (others => '1');
+                q(i).valid <= '1';
+            end loop;
+        end if;
+    end process dummy_output;
 end behavioral;
