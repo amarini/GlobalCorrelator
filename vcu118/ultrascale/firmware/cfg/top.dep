@@ -1,9 +1,9 @@
 setup settings.tcl
 
+src --cd ../ucf base.xdc
+
 include -c boards/vcu118-eval board.dep
 #include -c boards/kcu1500-eval board.dep
-
-src --cd ../ucf base.xdc
 
 src bram_sdp.vhd
 src ultra_buffer.vhd
@@ -11,5 +11,5 @@ src ultra_constants.vhd
 src ultra_data_types.vhd
 src null_algo.vhd
 src dummy_blinker.vhd
-src top.vhd
+src data_top.vhd
 setup build.tcl

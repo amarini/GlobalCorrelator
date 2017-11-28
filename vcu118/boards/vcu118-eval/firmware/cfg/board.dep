@@ -4,8 +4,14 @@
 
 setup settings.tcl
 
-src --cd ../ucf base.xdc
-src --cd ../ucf pins.xdc
-src --cd ../ucf pblocks.tcl
-
 src board_constants.vhd
+
+include -c ipbus-firmware:components/ipbus_core ipbus_core.dep
+src -c ipbus-firmware:components/ipbus_core ipbus_package.vhd
+
+src --cd ../ucf base.xdc
+
+include vcu118_infra.dep
+
+src vcu118_top.vhd
+

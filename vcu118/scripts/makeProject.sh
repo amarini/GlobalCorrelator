@@ -28,7 +28,7 @@ fi;
 
 source ipbb/env.sh
 
-test -d ultratests && rm -r ultratests
+test -d ultratests && rm -rf ultratests
 ipbb init ultratests
 
 mkdir ultratests/src/ultratests
@@ -37,12 +37,12 @@ ln -sf ../../../../ultrascale .
 ln -sf ../../../../boards .
 popd
 
-#pushd ultratests/src
+pushd ultratests/src
 ## Get MP7 core firmware
 #ipbb add git https://gitlab.cern.ch/thea/mp7.git -b standalone
-## Get IPbus firmware
-#ipbb add git https://github.com/ipbus/ipbus-firmware.git
-#popd
+# Get IPbus firmware
+ipbb add git https://github.com/ipbus/ipbus-firmware.git
+popd
 
 
 pushd ultratests
