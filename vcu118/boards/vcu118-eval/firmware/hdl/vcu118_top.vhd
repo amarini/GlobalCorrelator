@@ -33,9 +33,9 @@ end top;
 
 architecture Behavioral of top is
     signal clk, clk40 : std_logic;
-    signal rst_buf, rst : std_logic;
+    signal rst, rst40 : std_logic;
 
-    signal clk_ipb, rst_ipb, rst_ipb_m, rst_ipb_u: std_logic;
+    signal clk_ipb, rst_ipb: std_logic;
     signal ipb_out: ipb_wbus;
     signal ipb_in: ipb_rbus;
 begin
@@ -54,6 +54,9 @@ infra : entity work.vcu118_infra
         sysclk125_in_n => sysclk125_in_n,
         -- data output clocks,
         clk => clk, clk40 => clk40,
+        rst => rst, rst40 => rst40,
+        -- reset button
+        reset_button => rst_in,
         -- ok
         status_ok => leds(2),
         -- ipbus
@@ -64,20 +67,6 @@ infra : entity work.vcu118_infra
         txp => txp, txn => txn,
         rxp => rxp, rxn => rxn,
         phy_on => phy_on, phy_resetb => phy_resetb);
-
--- FIXME something better to generate the rest signals
--- async rest of the algo
-rstb : entity work.reset_bridge 
-    port map( clk => clk, rst_in => rst_in, rst => rst);
--- sync reset of the ipbus
-rstib : process(clk_ipb)
-    begin
-        if rising_edge(clk_ipb) then
-            rst_ipb_m <= rst_in;
-            rst_ipb_u <= rst_ipb_m;
-        end if;
-    end process;
-rstib_buf : BUFG port map (I => rst_ipb_u, O => rst_ipb);
 
 -- FIXME do something with ipbus
 ipb_in <= IPB_RBUS_NULL;

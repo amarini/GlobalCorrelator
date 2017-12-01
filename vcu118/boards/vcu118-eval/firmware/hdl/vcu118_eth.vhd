@@ -52,14 +52,12 @@ entity vcu118_eth is
         phy_on   : out std_logic; -- on/off signal
         phy_resetb: out std_logic; -- reset signal (inverted)
         -- 125 MHz clocks
-        sysclk125 : in std_logic;  -- 125 MHz from outside
-        clk125_out: out std_logic; -- 125 MHz from ethernet
-        rst125_out: out std_logic; -- 125 MHz from ethernet
+        ethclk125: out std_logic; -- 125 MHz from ethernet
+        ethrst125: out std_logic; -- 125 MHz from ethernet
         -- connection control and status (to logic)
-        rsti: in std_logic;    -- request reset of ethernet MAC
+        rst: in std_logic;    -- request reset of ethernet MAC
         locked: out std_logic; -- locked to ethernet clock
-        rst_phy   : in std_logic;    -- request rest of external ethernet device
-        rst_phy_done: out std_logic; -- signal that the phy was reset correctly
+        rst_phy: in std_logic;    -- request rest of external ethernet device
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
         tx_valid: in std_logic;
@@ -191,15 +189,12 @@ architecture rtl of vcu118_eth is
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
     signal gmii_rx_clk: std_logic;
     signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
-    signal rst_phy_counter : natural range 0 to 255 := 0;
-    signal rst_phy_started : std_logic := '0';
-    signal rst_phy_done_i : std_logic := '0';
 begin
 
-    clk125_out <= clk125;
-    rst125_out <= rst125;
+    ethclk125 <= clk125;
+    ethrst125 <= rst125;
     
-    rstn <= not (rsti or not locked_i);
+    rstn <= not (rst or rst125 or not locked_i);
 
     mac: temac_gbe_v9_0
         port map(
@@ -304,44 +299,15 @@ begin
             --tx_vtc_rdy => 
             --rx_dly_rdy => 
             --rx_vtc_rdy => 
-            reset => rsti
+            reset => rst
         );
 
 
     locked_i <= tx_locked and rx_locked;
     locked <= locked_i;
-  
-    clk125_out <= clk125;
 
-    -- phys reset code (external device needs at least 1us => 125 clock cycles of a 125 MHz clock
-    phy_reset_p: process(sysclk125)
-    begin   
-        if rising_edge(sysclk125) then
-            if rst_phy = '1' then
-                rst_phy_started <= '1';
-                rst_phy_counter <= 0;
-                rst_phy_done_i  <= '0';
-                phy_resetb <= '0';
-            elsif rst_phy_started = '1' then
-                if rst_phy_counter = 255 then
-                    rst_phy_started <= '0';
-                    rst_phy_done_i <= '1';
-                    phy_resetb <= '1';
-                else
-                    rst_phy_counter <= rst_phy_counter + 1;
-                    rst_phy_started <= '1';
-                    rst_phy_done_i <= '0';
-                    phy_resetb <= '0';
-                end if;
-            else
-                rst_phy_started <= '0';
-                rst_phy_done_i <= '1';
-                phy_resetb <= '1';
-            end if;       
-        end if;
-    end process phy_reset_p; 
-    rst_phy_done <= rst_phy_done_i;
     phy_on <= '1';
+    phy_resetb <= not rst_phy;
 
 end rtl;
 

@@ -15,7 +15,7 @@ entity vcu118_clocks is
         sysclk125_in_n : in std_logic; -- 125 MHz
      -- output clocks (all on BUFGs)
         sysclk125 : out std_logic; -- system clock (125 MHz)
-        ipbclk    : out std_logic; -- ipbus clock (31.25 MHz)
+        ipbclk    : out std_logic; -- ipbus clock (30 MHz)
         clk       : out std_logic; -- algo clock (240 MHz)
         clk40     : out std_logic; -- 40 MHz output clock
         --clkslow   : out std_logic; -- slow algo clock (120 MHz)

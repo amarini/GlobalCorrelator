@@ -15,11 +15,15 @@ entity vcu118_infra is
         -- output data clocks & reset
         clk:   out std_logic; -- algo clock (240 MHz)
         clk40: out std_logic; -- 40 MHz output clock
+        rst:   out std_logic; -- algo reset (on algo clock)
+        rst40: out std_logic; -- algo reset (on clk40)
+        -- input big reset button
+        reset_button: in std_logic; -- in case of panic, press this button
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
         -- ipbus
         clk_ipb: out std_logic;
-        rst_ipb: in std_logic;
+        rst_ipb: out std_logic;
         ipb_in: in ipb_rbus; 
         ipb_out: out ipb_wbus;
         -- ethernet
@@ -35,12 +39,17 @@ entity vcu118_infra is
 end vcu118_infra;
 
 architecture rtl of vcu118_infra is
-    -- for clocking part
-    signal sysclk125, ipbclk, mmcm_reset, mmcm_locked: std_logic; 
+    -- ===== clock, rest and status signals ===== ---
+    -- for clocking part (the ones without the _i don't go out of this module)
+    signal clk_i, clk40_i, clk_ipb_i, sysclk125, mmcm_locked: std_logic; 
+    -- inputs from reset logic
+    signal rst_ipb_i, rst_ipb_ctrl, rst_eth, rst_phy, rst_eth_clients: std_logic;
     -- inputs from ethernet
-    signal eth_clk125, eth_rst125, eth_locked, phy_reset_done: std_logic;
-    -- control
-    signal rst_eth, rst_phy: std_logic; -- request rest ethernet MAC / physical interface  
+    signal ethclk125, ethrst125, eth_locked: std_logic;
+    -- generated here
+    signal rst_ipbus_macpart: std_logic;
+
+    -- ===== data lines ===== ---
     -- ipbus to ethernet
     signal tx_data, rx_data: std_logic_vector(7 downto 0);
     signal tx_valid, tx_last, tx_error, tx_ready, rx_valid, rx_last, rx_error: std_logic;
@@ -56,27 +65,49 @@ begin
             sysclk125_in_p => sysclk125_in_p,
             sysclk125_in_n => sysclk125_in_n,
             sysclk125 => sysclk125,
-            ipbclk => ipbclk,
-            clk => clk,
-            clk40 => clk40,
-            mmcm_reset => mmcm_reset,
+            ipbclk => clk_ipb_i,
+            clk => clk_i,
+            clk40 => clk40_i,
+            mmcm_reset => '0', -- for the moment, assume we don't need to reset this
             mmcm_locked => mmcm_locked);
+    clk <= clk_i;
+    clk40 <= clk40_i;
 
-    mmcm_reset <= '0'; -- FIXME figure out input reset logic
+    resets : entity work.vcu118_resets
+        port map(
+            sysclk125 => sysclk125, -- system clock (125 MHz)
+            ethclk125 => ethclk125, -- ethernet clock (125 MHz)
+            ipbclk    => clk_ipb_i, -- ipbus clock (30 MHz)
+            clk       => clk_i, -- algo clock (240 MHz)
+            clk40     => clk40_i, -- 40 MHz clock
+            --
+            mmcm_locked => mmcm_locked,
+            eth_locked => eth_locked,
+            request_hard_rst_ext => reset_button,
+            request_hard_rst_ipb => '0', -- FIXME read from IPbus register
+            request_soft_rst_ipb => '0', -- FIXME read from IPbus register
+            --
+            rst => rst,
+            rst40 => rst40,
+            rst_ipb => rst_ipb_i,
+            rst_ipb_ctrl => rst_ipb_ctrl,
+            rst_phy => rst_phy,
+            rst_eth => rst_eth,
+            rst_eth_clients => rst_eth_clients,
+            -- this is on when all resets are complete
+            status_ok => status_ok);
+    rst_ipb <= rst_ipb_i;
 
     eth : entity work.vcu118_eth
         port map(
-            -- system clock in
-            sysclk125 => sysclk125,
             -- reset in
-            rsti => rst_eth,
+            rst => rst_eth,
             rst_phy => rst_phy,
             -- status
             locked => eth_locked,
-            rst_phy_done => phy_reset_done,
             -- eth clock out
-            clk125_out => eth_clk125,
-            rst125_out => eth_rst125,
+            ethclk125 => ethclk125,
+            ethrst125 => ethrst125,
             -- mac ports (go to ipbus)
             tx_data => tx_data, rx_data => rx_data,
             tx_valid => tx_valid, tx_last => tx_last, tx_error => tx_error, tx_ready => tx_ready, 
@@ -87,15 +118,14 @@ begin
             rxp => rxp, rxn => rxn,
             phy_on => phy_on, phy_resetb => phy_resetb);
 
-    rst_eth <= '0'; -- FIXME figure out when to reset
-    rst_phy <= '0'; -- FIXME figure out when to reset
+    rst_ipbus_macpart <= ethrst125 or rst_eth_clients;
 
     ipbus: entity work.ipbus_ctrl
         port map(
-            mac_clk => eth_clk125,
-            rst_macclk => eth_rst125,
-            ipb_clk => ipbclk,
-            rst_ipb => rst_ipb,
+            mac_clk => ethclk125,
+            rst_macclk => rst_ipbus_macpart,
+            ipb_clk => clk_ipb_i,
+            rst_ipb => rst_ipb_ctrl,
             mac_rx_data => rx_data,
             mac_rx_valid => rx_valid,
             mac_rx_last => rx_last,
@@ -113,8 +143,6 @@ begin
 
     mac_addr <= X"020ddba11511";
     ip_addr <= X"c0a8c811";
-    clk_ipb <= ipbclk;
-
-    status_ok <= mmcm_locked and eth_locked and phy_reset_done;
+    clk_ipb <= clk_ipb_i;
 
 end rtl;

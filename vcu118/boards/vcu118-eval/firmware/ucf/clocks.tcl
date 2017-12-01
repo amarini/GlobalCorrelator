@@ -26,9 +26,5 @@ proc false_path {patt clk} {
 }
 
 false_path {leds[*]} main_clk
-false_path rst_in main_clk
+false_path rst_in sys125_clk
 false_path phy_resetb sys125_clk
-
-set_property ASYNC_REG true [ get_cells "rstb/rst_bridge_*" ]
-set_property ASYNC_REG true [ get_cells "rst_ipb_*" ]
-
