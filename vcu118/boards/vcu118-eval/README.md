@@ -28,10 +28,10 @@ Buffers are always looping, both the injection and the capture one.
 ## Ethernet
 
 The FPGA is connected to an external 10/100/1000 PHY device via SGMII interface, with:
-    * two LVDS pairs for input and output
-    * one LVDS pair for the 625 MHz received clock
-    * power on, reset
-    * MDIO/MDC management interface (which we don't yet know how to use)
+ * two LVDS pairs for input and output
+ * one LVDS pair for the 625 MHz received clock
+ * power on, reset
+ * MDIO/MDC management interface (which we don't yet know how to use)
 
 We use the Xilinx IP core "1G/2.5G Ethernet PCS/PMA or SGMII v16.1" to access the device.
 As the pins are not connected to a GT transceiver, we rely on the "Asynchronous SGMII over LVDS" solution (all the native SelectIO interfaces are hidden inside the core).
