@@ -5,7 +5,8 @@ src --cd ../ucf base.xdc
 include -c boards/vcu118-eval board.dep
 #include -c boards/kcu1500-eval board.dep
 
-src bram_sdp.vhd
+src -c ipbus-firmware:components/ipbus_core ipbus_fabric_simple.vhd
+src -c ipbus-firmware:components/ipbus_slaves ipbus_ported_dpram36.vhd
 src ultra_buffer.vhd
 src ultra_constants.vhd
 src ultra_data_types.vhd

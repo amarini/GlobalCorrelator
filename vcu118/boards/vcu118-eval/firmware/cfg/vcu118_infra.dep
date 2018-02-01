@@ -2,6 +2,10 @@ src --cd ../ucf eth.xdc
 
 include -c ipbus-firmware:components/ipbus_core ipbus_core.dep
 src -c ipbus-firmware:components/ipbus_core ipbus_package.vhd
+src -c ipbus-firmware:components/ipbus_core ipbus_fabric_simple.vhd
+src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_types.vhd
+src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_v.vhd
+src -c ipbus-firmware:components/ipbus_slaves ipbus_ctrlreg_v.vhd
 src -c ipbus-firmware:components/ipbus_util ipbus_clock_div.vhd
 
 src vcu118_clocks.vhd

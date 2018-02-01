@@ -43,7 +43,14 @@ begin
   
 -- 
 data : entity work.data_top
-  port map( clk => clk, rst => rst, leds => leds(1 downto 0));
+  port map( 
+        clk => clk, 
+        rst => rst, 
+        clk_ipb => clk_ipb, 
+        rst_ipb => rst_ipb, 
+        ipb_in => ipb_out, 
+        ipb_out => ipb_in, 
+        leds => leds(1 downto 0));
 
 infra : entity work.vcu118_infra
   port map( 
@@ -68,7 +75,6 @@ infra : entity work.vcu118_infra
         rxp => rxp, rxn => rxn,
         phy_on => phy_on, phy_resetb => phy_resetb);
 
--- FIXME do something with ipbus
-ipb_in <= IPB_RBUS_NULL;
+   
 
 end Behavioral;

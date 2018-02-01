@@ -52,12 +52,17 @@ What we need is:
  * a soft reset (algo only)
  * access to the injection buffers and capture buffers
 
-We can partition the address space in thwo or three:
+We can partition the address space in two or three:
  * a system part, that stays within the vcu118 infrastructure domain
  * a data part, that is used to read & write the buffers
  * possibly a user part, that may be used by the algorithm
- 
-*TODO*: everything
+
+
+In the most simple case in which we address all the data flatly, we have up to 76 channels (rounds up to 128 = 7 bits), each has 2 buffers (inject and capture, 1 bit) they are 1k long (10 bits) and a 36 bit word requires two ipbus addresses (1 bit) => total of 7+1+10+1 = 19 bits.
+One possibility is:
+   * highest bits = 001 => system stuff
+We can then look at the highest bits (31, 30, 29) to decide what kind of data we 
+
 
 ## Reset sequence
 

@@ -57,6 +57,18 @@ architecture rtl of vcu118_infra is
     signal mac_addr: std_logic_vector(47 downto 0);
     signal ip_addr: std_logic_vector(31 downto 0);
     signal pkt : std_logic;
+
+    -- ===== ipbus lines ===== ---
+    -- ipbus from ctrl to userland
+    signal ipb_in_i: ipb_rbus; 
+    signal ipb_out_i: ipb_wbus;
+    -- split into system and rest
+    signal ipb_to_slaves: ipb_wbus_array(1 downto 0);
+    signal ipb_from_slaves: ipb_rbus_array(1 downto 0);
+    -- split system into registers
+    signal ipb_to_my_slaves: ipb_wbus_array(3 downto 0);
+    signal ipb_from_my_slaves: ipb_rbus_array(3 downto 0);
+
 begin
     clocks : entity work.vcu118_clocks
         port map(
@@ -135,8 +147,8 @@ begin
             mac_tx_last => tx_last,
             mac_tx_error => tx_error,
             mac_tx_ready => tx_ready,
-            ipb_out => ipb_out,
-            ipb_in => ipb_in,
+            ipb_out => ipb_out_i,
+            ipb_in => ipb_in_i,
             mac_addr => mac_addr,
             ip_addr => ip_addr,
             pkt => pkt);
@@ -145,4 +157,17 @@ begin
     ip_addr <= X"c0a8c811";
     clk_ipb <= clk_ipb_i;
 
+    ipb_split_sys_other: entity work.ipbus_fabric_simple
+       generic map(NSLV => 2, DECODE_BASE => 30, DECODE_BITS => 1)
+       port map(ipb_in => ipb_out_i, ipb_out => ipb_in_i, ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
+
+    ipb_split_sys_into_regs: entity work.ipbus_fabric_simple
+       generic map(NSLV => 4, DECODE_BASE => 0, DECODE_BITS => 2)
+       port map(ipb_in => ipb_to_slaves(1), ipb_out => ipb_from_slaves(1), ipb_to_slaves => ipb_to_my_slaves, ipb_from_slaves => ipb_from_my_slaves);
+
+    -- FIXME put some real slaves to work here 
+    ipb_from_my_slaves(0) <= IPB_RBUS_NULL;
+    ipb_from_my_slaves(1) <= IPB_RBUS_NULL;
+    ipb_from_my_slaves(2) <= IPB_RBUS_NULL;
+    ipb_from_my_slaves(3) <= IPB_RBUS_NULL;
 end rtl;

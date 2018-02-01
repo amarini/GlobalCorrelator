@@ -20,10 +20,19 @@ architecture behavioral of ultra_null_algo is
     subtype int16 is signed(15 downto 0);
     type vint16 is array (natural range <>) of int16;
     -- some buffers to help the thing meet the timing
+    -- also, some attributes to tell Vivado to not optimize out the buffers
+    -- merging them or absorbing them into a SLR16E, which defeats 
+    -- the purpose of putting them...
     signal buff_in : ndata(4*N_QUADS-1 downto 0);
     signal buff_out : ndata(4*N_QUADS-1 downto 0);
     signal buff_out1 : ndata(4*N_QUADS-1 downto 0);
     signal buff_out2 : ndata(4*N_QUADS-1 downto 0);
+    attribute shreg_extract : string;
+    attribute dont_touch : string;
+    attribute shreg_extract of buff_out1 : signal is "no";
+    attribute shreg_extract of buff_out2 : signal is "no";
+    attribute dont_touch of buff_out1 : signal is "yes";
+    attribute dont_touch of buff_out2 : signal is "yes";
     -- let's do something that has some non-trivial routing
     signal fibers_hi: vint16(4*N_QUADS-1 downto 0);
     signal fibers_lo: vint16(4*N_QUADS-1 downto 0);

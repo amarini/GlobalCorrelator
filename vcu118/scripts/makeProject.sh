@@ -41,7 +41,7 @@ pushd ultratests/src
 ## Get MP7 core firmware
 #ipbb add git https://gitlab.cern.ch/thea/mp7.git -b standalone
 # Get IPbus firmware
-ipbb add git https://github.com/ipbus/ipbus-firmware.git
+ipbb add git https://github.com/gpetruc/ipbus-firmware.git
 popd
 
 
