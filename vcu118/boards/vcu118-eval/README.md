@@ -57,11 +57,22 @@ We can partition the address space in two or three:
  * a data part, that is used to read & write the buffers
  * possibly a user part, that may be used by the algorithm
 
-
-In the most simple case in which we address all the data flatly, we have up to 76 channels (rounds up to 128 = 7 bits), each has 2 buffers (inject and capture, 1 bit) they are 1k long (10 bits) and a 36 bit word requires two ipbus addresses (1 bit) => total of 7+1+10+1 = 19 bits.
-One possibility is:
-   * highest bits = 001 => system stuff
-We can then look at the highest bits (31, 30, 29) to decide what kind of data we 
+Hypothetical address layout:
+ * bit 30 == 1: system space
+   * addr 0x0 => 0x00000000: control register
+        * bit 30 => soft reset
+        * bit 31 => hard reset
+   * addr 0x1 => 0x00000001: status register
+        * bit 0 => mmcm_locked
+        * bit 1 => eth_locked
+        * bit 31 => status ok
+ * bit 30 == 1 (0x40000000): data space
+   * bits 12-17: (0, 1, .. 17=0x11) * 0x1000: quad selection
+     * bit 4 = 0 (0x10): status and control registers
+         * addr 0x0: control register: bits 0-7 => inj 0, cap 0, inj 1, cap 1, ..., inj 3, cap 3
+     * bit 4 = 1 (0x10): buffers
+         * bits 1-3: 0x0, 0x2, .. 0xE: select which buffer (inj 0, cap 0, inj 1, cap 1, ..., inj 3, cap 3);
+           * each ported_dpram36 needs 2 addresses => 1 bit (bit 0)
 
 
 ## Reset sequence

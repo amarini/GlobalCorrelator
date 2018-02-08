@@ -29,8 +29,10 @@ architecture behavioral of ultra_null_algo is
     signal buff_out2 : ndata(4*N_QUADS-1 downto 0);
     attribute shreg_extract : string;
     attribute dont_touch : string;
+    attribute shreg_extract of buff_out  : signal is "no";
     attribute shreg_extract of buff_out1 : signal is "no";
     attribute shreg_extract of buff_out2 : signal is "no";
+    attribute dont_touch of buff_out  : signal is "yes";
     attribute dont_touch of buff_out1 : signal is "yes";
     attribute dont_touch of buff_out2 : signal is "yes";
     -- let's do something that has some non-trivial routing

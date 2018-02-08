@@ -4,6 +4,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 use work.ipbus.all;
+use work.ipbus_reg_types.all;
 
 entity vcu118_infra is
     port(
@@ -43,7 +44,7 @@ architecture rtl of vcu118_infra is
     -- for clocking part (the ones without the _i don't go out of this module)
     signal clk_i, clk40_i, clk_ipb_i, sysclk125, mmcm_locked: std_logic; 
     -- inputs from reset logic
-    signal rst_ipb_i, rst_ipb_ctrl, rst_eth, rst_phy, rst_eth_clients: std_logic;
+    signal rst_ipb_i, rst_ipb_ctrl, rst_eth, rst_phy, rst_eth_clients, status_ok_i: std_logic;
     -- inputs from ethernet
     signal ethclk125, ethrst125, eth_locked: std_logic;
     -- generated here
@@ -65,10 +66,8 @@ architecture rtl of vcu118_infra is
     -- split into system and rest
     signal ipb_to_slaves: ipb_wbus_array(1 downto 0);
     signal ipb_from_slaves: ipb_rbus_array(1 downto 0);
-    -- split system into registers
-    signal ipb_to_my_slaves: ipb_wbus_array(3 downto 0);
-    signal ipb_from_my_slaves: ipb_rbus_array(3 downto 0);
-
+    signal ctrl_reg: ipb_reg_v(0 downto 0); 
+    signal stat_reg: ipb_reg_v(0 downto 0);
 begin
     clocks : entity work.vcu118_clocks
         port map(
@@ -96,8 +95,8 @@ begin
             mmcm_locked => mmcm_locked,
             eth_locked => eth_locked,
             request_hard_rst_ext => reset_button,
-            request_hard_rst_ipb => '0', -- FIXME read from IPbus register
-            request_soft_rst_ipb => '0', -- FIXME read from IPbus register
+            request_hard_rst_ipb => ctrl_reg(0)(31),
+            request_soft_rst_ipb => ctrl_reg(0)(30),
             --
             rst => rst,
             rst40 => rst40,
@@ -107,8 +106,9 @@ begin
             rst_eth => rst_eth,
             rst_eth_clients => rst_eth_clients,
             -- this is on when all resets are complete
-            status_ok => status_ok);
+            status_ok => status_ok_i);
     rst_ipb <= rst_ipb_i;
+    status_ok <= status_ok_i;
 
     eth : entity work.vcu118_eth
         port map(
@@ -161,13 +161,26 @@ begin
        generic map(NSLV => 2, DECODE_BASE => 30, DECODE_BITS => 1)
        port map(ipb_in => ipb_out_i, ipb_out => ipb_in_i, ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
 
-    ipb_split_sys_into_regs: entity work.ipbus_fabric_simple
-       generic map(NSLV => 4, DECODE_BASE => 0, DECODE_BITS => 2)
-       port map(ipb_in => ipb_to_slaves(1), ipb_out => ipb_from_slaves(1), ipb_to_slaves => ipb_to_my_slaves, ipb_from_slaves => ipb_from_my_slaves);
+    ipb_out  <= ipb_to_slaves(1);
+    ipb_from_slaves(1) <= ipb_in;
 
-    -- FIXME put some real slaves to work here 
-    ipb_from_my_slaves(0) <= IPB_RBUS_NULL;
-    ipb_from_my_slaves(1) <= IPB_RBUS_NULL;
-    ipb_from_my_slaves(2) <= IPB_RBUS_NULL;
-    ipb_from_my_slaves(3) <= IPB_RBUS_NULL;
+    reg: entity work.ipbus_ctrlreg_v
+        port map(
+                clk => clk_ipb_i,
+                reset => rst_ipb_i,
+                ipbus_in => ipb_to_slaves(0),
+                ipbus_out => ipb_from_slaves(0),
+                d => stat_reg,
+                q => ctrl_reg
+            );
+    do_reg: process(clk_ipb_i)
+        begin
+            if clk_ipb_i'event and clk_ipb_i = '1' then
+                stat_reg(0) <= ( 0 => mmcm_locked,
+                                 1 => eth_locked,
+                                31 => status_ok_i,
+                                others => '0');
+            end if;
+        end process do_reg;
+
 end rtl;
