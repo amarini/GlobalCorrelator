@@ -1,6 +1,6 @@
 @device_name = "xcvu9p"
 @device_package = "-flga2104"
-@device_speed = "-2L-e-es1"
+@device_speed = "-2L-e"
 
 setup settings.tcl
 
