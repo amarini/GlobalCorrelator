@@ -1,7 +1,7 @@
 # FROM UG1224 VCU118 board user guide, chapter 3
 # Using 300 MHz system clock from the board
-set_property IOSTANDARD LVDS [get_ports sysclk_in_p]
-set_property IOSTANDARD LVDS [get_ports sysclk_in_n]
+set_property IOSTANDARD DIFF_SSTL12 [get_ports sysclk_in_p]
+set_property IOSTANDARD DIFF_SSTL12 [get_ports sysclk_in_n]
 set_property PACKAGE_PIN G31 [get_ports sysclk_in_p]
 set_property PACKAGE_PIN F31 [get_ports sysclk_in_n]
 # Also using 125 MHz system clock from the board
