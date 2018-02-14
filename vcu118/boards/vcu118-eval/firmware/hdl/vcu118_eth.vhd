@@ -144,8 +144,6 @@ architecture rtl of vcu118_eth is
             rx_logic_reset : out STD_LOGIC;
             rx_locked : out STD_LOGIC;
             tx_locked : out STD_LOGIC;
-            tx_pll_clkout_phy_en : out STD_LOGIC;
-            rx_pll_clkout_phy_en : out STD_LOGIC;
             tx_bsc_rst_out : out STD_LOGIC;
             rx_bsc_rst_out : out STD_LOGIC;
             tx_bs_rst_out : out STD_LOGIC;
@@ -173,14 +171,21 @@ architecture rtl of vcu118_eth is
             rx_btval_3 : out STD_LOGIC_VECTOR ( 8 downto 0 );
             rx_btval_2 : out STD_LOGIC_VECTOR ( 8 downto 0 );
             rx_btval_1 : out STD_LOGIC_VECTOR ( 8 downto 0 );
-            clk_rst_debug_out : out STD_LOGIC_VECTOR ( 7 downto 0 );
+            tx_dly_rdy_1 : in STD_LOGIC;
+            rx_dly_rdy_1 : in STD_LOGIC;
+            rx_vtc_rdy_1 : in STD_LOGIC;
+            tx_vtc_rdy_1 : in STD_LOGIC;
+            tx_dly_rdy_2 : in STD_LOGIC;
+            rx_dly_rdy_2 : in STD_LOGIC;
+            rx_vtc_rdy_2 : in STD_LOGIC;
+            tx_vtc_rdy_2 : in STD_LOGIC;
+            tx_dly_rdy_3 : in STD_LOGIC;
+            rx_dly_rdy_3 : in STD_LOGIC;
+            rx_vtc_rdy_3 : in STD_LOGIC;
+            tx_vtc_rdy_3 : in STD_LOGIC;
             tx_pll_clk_out : out STD_LOGIC;
             rx_pll_clk_out : out STD_LOGIC;
             tx_rdclk_out : out STD_LOGIC;
-            tx_dly_rdy : out STD_LOGIC;
-            tx_vtc_rdy : out STD_LOGIC;
-            rx_dly_rdy : out STD_LOGIC;
-            rx_vtc_rdy : out STD_LOGIC;
             reset : in STD_LOGIC
         );
     END COMPONENT;
@@ -262,8 +267,6 @@ begin
             --rx_logic_reset => 
             rx_locked => rx_locked,
             tx_locked => tx_locked,
-            --tx_pll_clkout_phy_en => 
-            --rx_pll_clkout_phy_en => 
             --tx_bsc_rst_out => 
             --rx_bsc_rst_out => 
             --tx_bs_rst_out => 
@@ -291,14 +294,21 @@ begin
             --rx_btval_3 => 
             --rx_btval_2 => 
             --rx_btval_1 => 
-            --clk_rst_debug_out => 
+            tx_dly_rdy_1 => '1',
+            rx_dly_rdy_1 => '1',
+            rx_vtc_rdy_1 => '1',
+            tx_vtc_rdy_1 => '1',
+            tx_dly_rdy_2 => '1',
+            rx_dly_rdy_2 => '1',
+            rx_vtc_rdy_2 => '1',
+            tx_vtc_rdy_2 => '1',
+            tx_dly_rdy_3 => '1',
+            rx_dly_rdy_3 => '1',
+            rx_vtc_rdy_3 => '1',
+            tx_vtc_rdy_3 => '1',
             --tx_pll_clk_out => 
             --rx_pll_clk_out => 
             --tx_rdclk_out => 
-            --tx_dly_rdy => 
-            --tx_vtc_rdy => 
-            --rx_dly_rdy => 
-            --rx_vtc_rdy => 
             reset => rst
         );
 
