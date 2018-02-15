@@ -25,8 +25,8 @@ entity ultra_buffer is
 end ultra_buffer;
 
 architecture behavioral of ultra_buffer is
-    attribute dont_touch : string;
-    attribute dont_touch of behavioral : architecture is "yes";
+    --attribute dont_touch : string;
+    --attribute dont_touch of behavioral : architecture is "yes";
     type mybuff is array (3 downto 0) of std_logic_vector(35 downto 0);
     signal inj_buff, cap_buff: mybuff;
     signal inj_buff_d, cap_buff_d: mybuff;
