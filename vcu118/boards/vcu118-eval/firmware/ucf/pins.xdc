@@ -13,9 +13,14 @@ set_property PACKAGE_PIN AY23 [get_ports sysclk125_in_n]
 # Table 3-29 of UG1224 VCU118 board user guide
 # Also /Vivado/2016.4/data/boards/board_files/vcu118/1.0/part0_pins.xml
 set_property IOSTANDARD LVCMOS12 [get_ports {leds[*]}]
-set_property PACKAGE_PIN AY30 [get_ports {leds[0]}]
-set_property PACKAGE_PIN BB32 [get_ports {leds[1]}]
-set_property PACKAGE_PIN BF32 [get_ports {leds[2]}]
+set_property PACKAGE_PIN AT32 [get_ports {leds[0]}]
+set_property PACKAGE_PIN AV34 [get_ports {leds[1]}]
+set_property PACKAGE_PIN AY30 [get_ports {leds[2]}]
+set_property PACKAGE_PIN BB32 [get_ports {leds[3]}]
+set_property PACKAGE_PIN BF32 [get_ports {leds[4]}]
+set_property PACKAGE_PIN AU37 [get_ports {leds[5]}]
+set_property PACKAGE_PIN AV36 [get_ports {leds[6]}]
+set_property PACKAGE_PIN BA37 [get_ports {leds[7]}]
 # push-button SW 10 pin GPIO_SW_N
 set_property IOSTANDARD LVCMOS18 [get_ports rst_in]
 set_property PACKAGE_PIN BB24 [get_ports rst_in]

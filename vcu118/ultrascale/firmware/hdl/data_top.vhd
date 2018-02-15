@@ -17,7 +17,7 @@ entity data_top is
     rst_ipb: in std_logic;
     ipb_in: in ipb_wbus;
     ipb_out: out ipb_rbus;
-    leds : out std_logic_vector(1 downto 0)
+    leds : out std_logic_vector(0 downto 0)
   );
 end data_top;
 
@@ -32,8 +32,8 @@ blink: entity work.dummy_blinker
    port map(
         clk => clk,
         rst => rst,
-        l1 => leds(0),
-        l2 => leds(1)
+        l1 => leds(0)
+        --l2 => leds(1)
    );
 
 gen_buffers: for Q in N_QUADS-1 downto 0 generate

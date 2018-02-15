@@ -27,7 +27,7 @@ entity top is
     phy_resetb: out std_logic; -- reset signal
     -- push button & leds
     rst_in : in std_logic; -- external reset button
-    leds : out std_logic_vector(2 downto 0)
+    leds : out std_logic_vector(7 downto 0)
   );
 end top;
 
@@ -50,7 +50,7 @@ data : entity work.data_top
         rst_ipb => rst_ipb, 
         ipb_in => ipb_out, 
         ipb_out => ipb_in, 
-        leds => leds(1 downto 0));
+        leds => leds(0 downto 0));
 
 infra : entity work.vcu118_infra
   port map( 
@@ -65,7 +65,8 @@ infra : entity work.vcu118_infra
         -- reset button
         reset_button => rst_in,
         -- ok
-        status_ok => leds(2),
+        status_ok => leds(1),
+        debug_leds => leds(7 downto 2),
         -- ipbus
         clk_ipb => clk_ipb, rst_ipb => rst_ipb, 
         ipb_in => ipb_in, ipb_out => ipb_out,

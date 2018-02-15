@@ -57,7 +57,8 @@ entity vcu118_eth is
         -- connection control and status (to logic)
         rst: in std_logic;    -- request reset of ethernet MAC
         locked: out std_logic; -- locked to ethernet clock
-        rst_phy: in std_logic;    -- request rest of external ethernet device
+        rst_phy: in std_logic;    -- request reset of external ethernet device
+        debug_leds: out std_logic_vector(7 downto 4);
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
         tx_valid: in std_logic;
@@ -121,6 +122,9 @@ architecture rtl of vcu118_eth is
             rxp_0 : in STD_LOGIC;
             rxn_0 : in STD_LOGIC;
             signal_detect_0 : in STD_LOGIC;
+            an_adv_config_vector_0 : in STD_LOGIC_VECTOR( 15 downto 0 );
+            an_restart_config_0 : in STD_LOGIC;
+            an_interrupt_0 : out STD_LOGIC;
             gmii_txd_0 : in STD_LOGIC_VECTOR ( 7 downto 0 );
             gmii_tx_en_0 : in STD_LOGIC;
             gmii_tx_er_0 : in STD_LOGIC;
@@ -194,6 +198,9 @@ architecture rtl of vcu118_eth is
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
     signal gmii_rx_clk: std_logic;
     signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
+    signal sgmii_status : std_logic_vector(15 downto 0);
+    signal an_done : std_logic;
+    signal sgmii_isolate: std_logic := '1';
 begin
 
     ethclk125 <= clk125;
@@ -246,6 +253,10 @@ begin
             rxp_0 => rxp,
             rxn_0 => rxn,
             signal_detect_0 => '1', --?
+            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
+                                      -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
+            an_restart_config_0 => '0', --?
+            an_interrupt_0 => an_done,
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
             gmii_tx_er_0 => gmii_tx_er,
@@ -258,8 +269,8 @@ begin
             sgmii_clk_en_0 => open, --??
             speed_is_10_100_0 => '0',
             speed_is_100_0 => '0',
-            status_vector_0 => open,
-            configuration_vector_0 => "00000",
+            status_vector_0 => sgmii_status,
+            configuration_vector_0 => (4 => '1', 3 => rst_phy, others => '0'),
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
@@ -319,5 +330,9 @@ begin
     phy_on <= '1';
     phy_resetb <= not rst_phy;
 
+    debug_leds(7) <= sgmii_status(0);
+    debug_leds(6) <= sgmii_status(1);
+    debug_leds(5) <= sgmii_status(7);
+    debug_leds(4) <= sgmii_status(12);
 end rtl;
 

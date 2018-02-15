@@ -22,6 +22,7 @@ entity vcu118_infra is
         reset_button: in std_logic; -- in case of panic, press this button
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
+        debug_leds : out std_logic_vector(7 downto 2); -- should be 1 on stable running
         -- ipbus
         clk_ipb: out std_logic;
         rst_ipb: out std_logic;
@@ -109,6 +110,8 @@ begin
             status_ok => status_ok_i);
     rst_ipb <= rst_ipb_i;
     status_ok <= status_ok_i;
+    debug_leds(2) <= mmcm_locked;
+    debug_leds(3) <= eth_locked;
 
     eth : entity work.vcu118_eth
         port map(
@@ -117,6 +120,7 @@ begin
             rst_phy => rst_phy,
             -- status
             locked => eth_locked,
+            debug_leds(7 downto 4) => debug_leds(7 downto 4),
             -- eth clock out
             ethclk125 => ethclk125,
             ethrst125 => ethrst125,
