@@ -62,7 +62,7 @@ entity vcu118_eth is
         rst: in std_logic;     -- request reset of ethernet MAC
         locked: out std_logic; -- locked to ethernet clock
         rst_phy: in std_logic; -- request reset of external ethernet device
-        debug_leds: out std_logic_vector(7 downto 1);
+        debug_leds: out std_logic_vector(7 downto 0);
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
         -- data in and out (connected to ipbus)
@@ -363,31 +363,28 @@ begin
                 rst_b1_c125 <= rst_b1_c125_m;
             end if;
         end process;
-    capture_reset2: process(clk125,reset_b2)
+
+    toggle_led: process(sysclk125)
         begin
-            if reset_b2 = '1' then
-                rst_b2_c125_m <= '1'; 
-                rst_b2_c125 <= '1'; 
-            elsif rising_edge(clk125) then
-                rst_b2_c125_m <= '0';
-                rst_b2_c125 <= rst_b2_c125_m;
+            if rising_edge(sysclk125) then
+                rst_b2_c125_d <= reset_b2;
+                if reset_b2 = '1' and rst_b2_c125_d = '0' then
+                    toggle_leds <= not toggle_leds;
+                end if;
             end if;
         end process;
 
-    debug_leds(1) <= rstn and locked_i and beat_clk125;
+    debug_leds(0) <= locked_i and beat_clk125;
+    debug_leds(1) <= mdio_done;
+    debug_leds(2) <= toggle_leds;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
 
     capture_leds: process(clk125)
     begin
         if rising_edge(clk125) then
-            rst_b2_c125_d <= rst_b2_c125;
-            if rst_b2_c125 = '0' and rst_b2_c125_d = '1' then
-                toggle_leds <= not toggle_leds;
-            end if;
             if rst_b1_c125 = '1' then
-                for_leds <= (2 => toggle_leds, others => '0');
+                for_leds <= (others => '0');
             else
-                for_leds(2) <= toggle_leds;
                 if toggle_leds = '0' then
                     if rst125 = '1'     then for_leds(3) <= '1'; end if;
                     if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;

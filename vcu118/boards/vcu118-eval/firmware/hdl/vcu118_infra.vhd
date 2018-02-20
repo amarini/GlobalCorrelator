@@ -24,7 +24,7 @@ entity vcu118_infra is
         reset_b2: in std_logic; -- in case of uneasiness, press this button
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
-        debug_leds : out std_logic_vector(7 downto 1); -- should be 1 on stable running
+        debug_leds : out std_logic_vector(7 downto 0); -- should be 1 on stable running
         -- ipbus
         clk_ipb: out std_logic;
         rst_ipb: out std_logic;
@@ -124,7 +124,7 @@ begin
             rst_phy => rst_phy,
             -- status
             locked => eth_locked,
-            debug_leds(7 downto 1) => debug_leds(7 downto 1),
+            debug_leds(7 downto 0) => debug_leds(7 downto 0),
             reset_b1 => reset_b1,
             reset_b2 => reset_b2,
             -- eth clock out
