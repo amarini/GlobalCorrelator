@@ -4,13 +4,15 @@ include -c ipbus-firmware:components/ipbus_core ipbus_core.dep
 src -c ipbus-firmware:components/ipbus_core ipbus_package.vhd
 src -c ipbus-firmware:components/ipbus_core ipbus_fabric_simple.vhd
 src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_types.vhd
-src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_v.vhd
+#src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_v.vhd
 src -c ipbus-firmware:components/ipbus_slaves ipbus_ctrlreg_v.vhd
 src -c ipbus-firmware:components/ipbus_util ipbus_clock_div.vhd
+src -c ipbus-firmware:components/ipbus_util led_stretcher.vhd
 
 src vcu118_clocks.vhd
 src vcu118_resets.vhd
 src vcu118_infra.vhd
+src vcu118_eth_mdio.vhd
 src vcu118_eth.vhd
 
 src -c ipbus-firmware:components/ipbus_eth ../cgn/temac_gbe_v9_0.xci

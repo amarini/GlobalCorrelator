@@ -49,7 +49,7 @@ for {set i 0} {$i < [ llength $quads ] } {incr i} {
     set slice_range SLICE_X${slice_x1}Y${slice_y1}:SLICE_X${slice_x2}Y${slice_y2}
     resize_pblock $bq -add $slice_range
     set_property  gridtypes {RAMB36 RAMB18 SLICE} $bq
-    add_cells_to_pblock $bq "data/gen_buffers\[${i}\].buffs"
+    #add_cells_to_pblock $bq "data/gen_buffers\[${i}\].buffs"
 }
 
 

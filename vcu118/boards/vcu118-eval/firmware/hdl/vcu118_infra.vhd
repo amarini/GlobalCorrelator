@@ -20,9 +20,11 @@ entity vcu118_infra is
         rst40: out std_logic; -- algo reset (on clk40)
         -- input big reset button
         reset_button: in std_logic; -- in case of panic, press this button
+        reset_b1: in std_logic; -- in case of worry, press this button
+        reset_b2: in std_logic; -- in case of uneasiness, press this button
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
-        debug_leds : out std_logic_vector(7 downto 2); -- should be 1 on stable running
+        debug_leds : out std_logic_vector(7 downto 1); -- should be 1 on stable running
         -- ipbus
         clk_ipb: out std_logic;
         rst_ipb: out std_logic;
@@ -36,7 +38,9 @@ entity vcu118_infra is
         rxp : in std_logic; 
         rxn : in std_logic; 
         phy_on   : out std_logic; -- on/off signal
-        phy_resetb: out std_logic -- reset signal
+        phy_resetb: out std_logic; -- reset signal
+        phy_mdio: inout std_logic; -- control line to program the PHY chip
+        phy_mdc : out std_logic    -- clock line (must be < 2.5 MHz)
     );
 end vcu118_infra;
 
@@ -110,8 +114,8 @@ begin
             status_ok => status_ok_i);
     rst_ipb <= rst_ipb_i;
     status_ok <= status_ok_i;
-    debug_leds(2) <= mmcm_locked;
-    debug_leds(3) <= eth_locked;
+    --debug_leds(1) <= mmcm_locked;
+    --debug_leds(3) <= eth_locked;
 
     eth : entity work.vcu118_eth
         port map(
@@ -120,10 +124,13 @@ begin
             rst_phy => rst_phy,
             -- status
             locked => eth_locked,
-            debug_leds(7 downto 4) => debug_leds(7 downto 4),
+            debug_leds(7 downto 1) => debug_leds(7 downto 1),
+            reset_b1 => reset_b1,
+            reset_b2 => reset_b2,
             -- eth clock out
             ethclk125 => ethclk125,
             ethrst125 => ethrst125,
+            sysclk125 => sysclk125,
             -- mac ports (go to ipbus)
             tx_data => tx_data, rx_data => rx_data,
             tx_valid => tx_valid, tx_last => tx_last, tx_error => tx_error, tx_ready => tx_ready, 
@@ -132,7 +139,8 @@ begin
             clk625_p => clk625_p, clk625_n => clk625_n,
             txp => txp, txn => txn,
             rxp => rxp, rxn => rxn,
-            phy_on => phy_on, phy_resetb => phy_resetb);
+            phy_on => phy_on, phy_resetb => phy_resetb, 
+            phy_mdio => phy_mdio, phy_mdc => phy_mdc);
 
     rst_ipbus_macpart <= ethrst125 or rst_eth_clients;
 
@@ -157,7 +165,8 @@ begin
             ip_addr => ip_addr,
             pkt => pkt);
 
-    mac_addr <= X"020ddba11511";
+    --mac_addr <= X"020ddba11511";
+    mac_addr <= X"000A35037D07";
     ip_addr <= X"c0a8c811";
     clk_ipb <= clk_ipb_i;
 

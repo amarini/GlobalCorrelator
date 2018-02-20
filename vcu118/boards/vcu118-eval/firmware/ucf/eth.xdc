@@ -44,3 +44,14 @@ set_property IOSTANDARD LVCMOS18 [get_ports phy_on]
 set_property IOSTANDARD LVCMOS18 [get_ports phy_resetb]
 set_property PACKAGE_PIN AR24 [get_ports phy_on]
 set_property PACKAGE_PIN BA21 [get_ports phy_resetb]
+
+
+set_property IOSTANDARD LVCMOS18 [get_ports phy_on]
+set_property IOSTANDARD LVCMOS18 [get_ports phy_resetb]
+set_property PACKAGE_PIN AR24 [get_ports phy_on]
+set_property PACKAGE_PIN BA21 [get_ports phy_resetb]
+
+set_property IOSTANDARD LVCMOS18 [get_ports phy_mdio]
+set_property IOSTANDARD LVCMOS18 [get_ports phy_mdc]
+set_property PACKAGE_PIN AR23 [get_ports phy_mdio]
+set_property PACKAGE_PIN AV23 [get_ports phy_mdc]

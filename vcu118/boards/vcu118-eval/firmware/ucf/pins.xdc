@@ -23,5 +23,9 @@ set_property PACKAGE_PIN AV36 [get_ports {leds[6]}]
 set_property PACKAGE_PIN BA37 [get_ports {leds[7]}]
 # push-button SW 10 pin GPIO_SW_N
 set_property IOSTANDARD LVCMOS18 [get_ports rst_in]
+set_property IOSTANDARD LVCMOS18 [get_ports rst_in1]
+set_property IOSTANDARD LVCMOS18 [get_ports rst_in2]
 set_property PACKAGE_PIN BB24 [get_ports rst_in]
+set_property PACKAGE_PIN BE23 [get_ports rst_in1]
+set_property PACKAGE_PIN BF22 [get_ports rst_in2]
 
