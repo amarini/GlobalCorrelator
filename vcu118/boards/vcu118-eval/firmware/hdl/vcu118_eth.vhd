@@ -65,6 +65,7 @@ entity vcu118_eth is
         debug_leds: out std_logic_vector(7 downto 0);
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
+        dip_sw : in std_logic_vector(3 downto 0);
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
         tx_valid: in std_logic;
@@ -367,10 +368,7 @@ begin
     toggle_led: process(sysclk125)
         begin
             if rising_edge(sysclk125) then
-                rst_b2_c125_d <= reset_b2;
-                if reset_b2 = '1' and rst_b2_c125_d = '0' then
-                    toggle_leds <= not toggle_leds;
-                end if;
+                toggle_leds <= dip_sw(0);
             end if;
         end process;
 

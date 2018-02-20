@@ -31,6 +31,7 @@ entity top is
     rst_in : in std_logic; -- external reset button
     rst_in1 : in std_logic; -- external reset button
     rst_in2 : in std_logic; -- external reset button
+    dip_sw : in std_logic_vector(3 downto 0);
     leds : out std_logic_vector(7 downto 0)
   );
 end top;
@@ -71,6 +72,7 @@ infra : entity work.vcu118_infra
         reset_button => rst_in,
         reset_b1 => rst_in1,
         reset_b2 => rst_in2,
+        dip_sw => dip_sw,
         -- ok
         status_ok => open, --leds(1),
         debug_leds => leds(7 downto 0),

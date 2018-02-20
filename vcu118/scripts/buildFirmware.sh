@@ -15,10 +15,16 @@ fi
 BUILD_DIR="build/"
 cd $BUILD_DIR
 
-source ipbb/env.sh
+source myipbb/env.sh
 
 cd ultratests/proj/ultra_build/
 
-ipbb vivado reset synth impl
+if [[ "$1" == "-p" ]]; then
+    ipbb vivado reset synth impl bitfile package
+elif [[ "$1" == "-a" ]]; then
+    ipbb vivado doit package
+else
+    ipbb vivado reset synth impl
+fi;
 #python checkTiming.py
 #ipbb vivado bitfile package

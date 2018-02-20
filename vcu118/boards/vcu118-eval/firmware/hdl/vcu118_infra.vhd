@@ -22,6 +22,7 @@ entity vcu118_infra is
         reset_button: in std_logic; -- in case of panic, press this button
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
+        dip_sw : in std_logic_vector(3 downto 0);
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
         debug_leds : out std_logic_vector(7 downto 0); -- should be 1 on stable running
@@ -127,6 +128,7 @@ begin
             debug_leds(7 downto 0) => debug_leds(7 downto 0),
             reset_b1 => reset_b1,
             reset_b2 => reset_b2,
+            dip_sw => dip_sw,
             -- eth clock out
             ethclk125 => ethclk125,
             ethrst125 => ethrst125,

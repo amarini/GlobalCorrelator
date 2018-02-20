@@ -25,8 +25,13 @@ else
     curl -L https://github.com/ipbus/ipbb/archive/v0.2.8.tar.gz | tar xvz
     mv ipbb-0.2.8 ipbb;
 fi;
+if test -d myipbb; then
+    echo "Will not re-download myipbb";
+else
+    git clone git@github.com:gpetruc/ipbb.git myipbb -b b0.2.8
+fi;
 
-source ipbb/env.sh
+source myipbb/env.sh
 
 test -d ultratests && rm -rf ultratests
 ipbb init ultratests

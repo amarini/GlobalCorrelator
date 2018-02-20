@@ -29,3 +29,10 @@ set_property PACKAGE_PIN BB24 [get_ports rst_in]
 set_property PACKAGE_PIN BE23 [get_ports rst_in1]
 set_property PACKAGE_PIN BF22 [get_ports rst_in2]
 
+# push-button SW 10 pin GPIO_SW_N
+set_property IOSTANDARD LVCMOS12 [get_ports {dip_sw[*]}]
+set_property PACKAGE_PIN B17 [get_ports dip_sw[0]]
+set_property PACKAGE_PIN G16 [get_ports dip_sw[1]]
+set_property PACKAGE_PIN J16 [get_ports dip_sw[2]]
+set_property PACKAGE_PIN D21 [get_ports dip_sw[3]]
+
