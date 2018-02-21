@@ -208,7 +208,8 @@ architecture rtl of vcu118_eth is
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
     signal status_vector : std_logic_vector(15 downto 0);
-    signal mdio_done : std_logic;
+    signal mdio_status_reg1, mdio_status_reg2 : std_logic_vector(15 downto 0);
+    signal mdio_done, mdio_poll_done : std_logic;
     signal beat_sysclk125, beat_clk125 : std_logic;
     signal rx_valid_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
@@ -347,6 +348,9 @@ begin
             sysclk125 => sysclk125,
             rst_phy => rst_phy,
             done => mdio_done,
+            poll_done => mdio_poll_done,
+            status_reg1 => mdio_status_reg1,
+            status_reg2 => mdio_status_reg2,
             phy_mdio => phy_mdio,
             phy_mdc => phy_mdc);
                 
@@ -373,8 +377,7 @@ begin
         end process;
 
     debug_leds(0) <= locked_i and beat_clk125;
-    debug_leds(1) <= mdio_done;
-    debug_leds(2) <= toggle_leds;
+    debug_leds(1) <= mdio_poll_done;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
 
     capture_leds: process(clk125)
@@ -383,18 +386,36 @@ begin
             if rst_b1_c125 = '1' then
                 for_leds <= (others => '0');
             else
-                if toggle_leds = '0' then
-                    if rst125 = '1'     then for_leds(3) <= '1'; end if;
-                    if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
-                    if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
-                    if status_vector(0) = '1' then for_leds(6) <= '1'; end if;
-                    if status_vector(1) = '1' then for_leds(7) <= '1'; end if;
+                if dip_sw(1) = '0' then
+                    if dip_sw(0) = '0' then
+                        if rst125 = '1'     then for_leds(3) <= '1'; end if;
+                        if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
+                        if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
+                        if status_vector(0) = '1' then for_leds(6) <= '1'; end if;
+                        if status_vector(1) = '1' then for_leds(7) <= '1'; end if;
+                    else
+                        if status_vector(2) = '1' then for_leds(3) <= '1'; end if;
+                        if status_vector(3) = '1' then for_leds(4) <= '1'; end if;
+                        if status_vector(4) = '1' then for_leds(5) <= '1'; end if;
+                        if status_vector(5) = '1' then for_leds(6) <= '1'; end if;
+                        if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
+                    end if;
                 else
-                    if status_vector(2) = '1' then for_leds(3) <= '1'; end if;
-                    if status_vector(3) = '1' then for_leds(4) <= '1'; end if;
-                    if status_vector(4) = '1' then for_leds(5) <= '1'; end if;
-                    if status_vector(5) = '1' then for_leds(6) <= '1'; end if;
-                    if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
+                    if dip_sw(0) = '0' then
+                        for_leds(2) <= mdio_status_reg1(5);
+                        for_leds(3) <= mdio_status_reg1(4);
+                        for_leds(4) <= mdio_status_reg1(3);
+                        for_leds(5) <= mdio_status_reg1(2);
+                        for_leds(6) <= mdio_status_reg1(1);
+                        for_leds(7) <= mdio_status_reg1(0);
+                    else
+                        for_leds(2) <= mdio_status_reg2(13);
+                        for_leds(3) <= mdio_status_reg2(12);
+                        for_leds(4) <= mdio_status_reg2(11);
+                        for_leds(5) <= mdio_status_reg2(10);
+                        for_leds(6) <= mdio_status_reg2(1);
+                        for_leds(7) <= mdio_status_reg2(0);
+                    end if;
                 end if;
             end if;
         end if;

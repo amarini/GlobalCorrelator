@@ -11,6 +11,9 @@ entity vcu118_eth_mdio is
     sysclk125: in std_logic; -- clock
     rst_phy:   in std_logic; -- reset signal of the phy (sync to sysclk125)
     done:      out std_logic; -- phy was programmed successfully
+    poll_done:   out std_logic; -- phy was polled successfully
+    status_reg1: out std_logic_vector(15 downto 0); -- phy status reg 1
+    status_reg2: out std_logic_vector(15 downto 0); -- phy status reg 2
     phy_mdio: inout std_logic; -- control line to program the PHY chip
     phy_mdc : out std_logic    -- clock line (must be < 2.5 MHz)
   );
@@ -74,16 +77,16 @@ architecture Behavioral of vcu118_eth_mdio is
     -- see https://www.xilinx.com/support/answers/69494.html, and data sheet of TI DP83867, section 8.6.40 "SGMII Control Register 1"
     -- also, disable RGMII mode (unclear if it's needed)
     -- we bit-reverse it in the definition, so that we can send 0 to 511
-    signal mdio_data : std_logic_vector(0 to 255) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ); -- &  
-                                                     --encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000" ); 
-    signal mdio_data_addr : unsigned(8 downto 0) := (others => '0');
+    signal mdio_data : std_logic_vector(0 to 511) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) &  
+                                                     encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000" ); 
+    signal mdio_data_addr : unsigned(9 downto 0) := (others => '0');
 
- -- signal mdio_poll_data : std_logic_vector(0 to 127) := encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
- --                                                       encode_mdio_reg_read( VCU118_PHYADD, b"01010" ) ; -- status register 1
- -- signal mdio_poll_mask : std_logic_vector(0 to  63) := mdio_reg_read_mask();
- -- signal mdio_poll_addr : unsigned(7 downto 0) := (others => '0');
- -- signal mdio_polled_data : std_logic_vector(0 to 31) := (others => '0');
- -- signal mdio_poll_last : std_logic := '0';
+    signal mdio_poll_data : std_logic_vector(0 to 127) := encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
+                                                          encode_mdio_reg_read( VCU118_PHYADD, b"01010" ) ; -- status register 1
+    signal mdio_poll_mask : std_logic_vector(0 to  63) := mdio_reg_read_mask;
+    signal mdio_poll_addr : unsigned(7 downto 0) := (others => '0');
+    signal mdio_polled_data : std_logic_vector(0 to 127) := (others => '0');
+    signal mdio_poll_last : std_logic := '0';
 begin
 
 
@@ -127,23 +130,27 @@ phy_prog: process(sysclk125)
         if rising_edge(sysclk125) then
             if clk2mhz_edge = '1' then
                 if rst_chain(0) = '0' then
-                    if mdio_data_addr(8) = '0' then
+                    if mdio_data_addr(9) = '0' then
                         mdio_t <= '0'; -- write
-                        mdio_o <= mdio_data(to_integer(mdio_data_addr(7 downto 0)));
+                        mdio_o <= mdio_data(to_integer(mdio_data_addr(8 downto 0)));
                         mdio_data_addr <= mdio_data_addr + 1;
-                        --mdio_poll_last <= slowclk;
+                        mdio_poll_last <= slowclk;
                     else
-                       --if mdio_poll_last != slowclk then
-                       --    mdio_poll_addr <= (others => '0');
-                       --    mdio_poll_last <= slowclk;
-                       --elsif mdio_poll_addr(mdio_poll_addr'length-1) = '0' then
-                       --    if mdio_poll_mask(to_integer(mdio_poll_addr(5 downto 0))) then
-                       --        mdio_t <= '0';
-                       --        mdio_o <= mdio_poll_data(to_integer(mdio_poll_addr(6 downto 0)))
-
-                       --else
+                       if mdio_poll_last /= slowclk then
+                           mdio_poll_addr <= (others => '0');
+                           mdio_poll_last <= slowclk;
+                       elsif mdio_poll_addr(7) = '0' then
+                           mdio_poll_addr <= mdio_poll_addr + 1;
+                           if mdio_poll_mask(to_integer(mdio_poll_addr(5 downto 0))) = '1' then
+                               mdio_t <= '0';
+                               mdio_o <= mdio_poll_data(to_integer(mdio_poll_addr(6 downto 0)));
+                            else
+                               mdio_t <= '1';
+                               mdio_polled_data(to_integer(mdio_poll_addr(6 downto 0))) <= mdio_i;
+                            end if;
+                       else
                             mdio_t <= '1'; -- read/dont-care
-                       -- end if;
+                        end if;
                     end if;
                 else
                     mdio_data_addr <= (others => '0');
@@ -153,6 +160,18 @@ phy_prog: process(sysclk125)
         end if;
     end process;
 
-done <= mdio_data_addr(8);
+done <= mdio_data_addr(9);
+poll_done <= mdio_poll_addr(7);
+
+phy_stat: process(sysclk125)
+    begin
+        if rising_edge(sysclk125) then
+            for I in 15 downto 0 loop
+                status_reg1(I) <= mdio_polled_data(63-I);
+                status_reg2(I) <= mdio_polled_data(127-I);
+            end loop;
+        end if;
+    end process;
+
 
 end Behavioral;
