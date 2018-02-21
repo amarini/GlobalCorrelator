@@ -129,9 +129,9 @@ architecture rtl of vcu118_eth is
             rxp_0 : in STD_LOGIC;
             rxn_0 : in STD_LOGIC;
             signal_detect_0 : in STD_LOGIC;
-            --an_adv_config_vector_0 : in STD_LOGIC_VECTOR( 15 downto 0 );
-            --an_restart_config_0 : in STD_LOGIC;
-            --an_interrupt_0 : out STD_LOGIC;
+            an_adv_config_vector_0 : in STD_LOGIC_VECTOR( 15 downto 0 );
+            an_restart_config_0 : in STD_LOGIC;
+            an_interrupt_0 : out STD_LOGIC;
             gmii_txd_0 : in STD_LOGIC_VECTOR ( 7 downto 0 );
             gmii_tx_en_0 : in STD_LOGIC;
             gmii_tx_er_0 : in STD_LOGIC;
@@ -207,8 +207,9 @@ architecture rtl of vcu118_eth is
     signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
+    signal an_done : std_logic;
     signal status_vector : std_logic_vector(15 downto 0);
-    signal mdio_status_reg1, mdio_status_reg2 : std_logic_vector(15 downto 0);
+    signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
     signal mdio_done, mdio_poll_done : std_logic;
     signal beat_sysclk125, beat_clk125 : std_logic;
     signal rx_valid_i : std_logic;
@@ -268,11 +269,11 @@ begin
             rxp_0 => rxp,
             rxn_0 => rxn,
             signal_detect_0 => '1', --?
-            --an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
+            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
-            --an_restart_config_0 => '0', --useless, it doesn't reach: the phy
-            --an_interrupt_0 => done, --useless, it doesn't come from the phy
+            an_restart_config_0 => '0', --useless, it doesn't reach: the phy
+            an_interrupt_0 => an_done, --useless, it doesn't come from the phy
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
             gmii_tx_er_0 => gmii_tx_er,
@@ -351,6 +352,9 @@ begin
             poll_done => mdio_poll_done,
             status_reg1 => mdio_status_reg1,
             status_reg2 => mdio_status_reg2,
+            status_reg3 => mdio_status_reg3,
+            status_reg4 => mdio_status_reg4,
+            status_reg5 => mdio_status_reg5,
             phy_mdio => phy_mdio,
             phy_mdc => phy_mdc);
                 
@@ -386,8 +390,9 @@ begin
             if rst_b1_c125 = '1' then
                 for_leds <= (others => '0');
             else
-                if dip_sw(1) = '0' then
+                if dip_sw(3) = '0' then
                     if dip_sw(0) = '0' then
+                        for_leds(2) <= an_done;
                         if rst125 = '1'     then for_leds(3) <= '1'; end if;
                         if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
                         if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
@@ -401,21 +406,64 @@ begin
                         if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
                     end if;
                 else
-                    if dip_sw(0) = '0' then
-                        for_leds(2) <= mdio_status_reg1(5);
-                        for_leds(3) <= mdio_status_reg1(4);
-                        for_leds(4) <= mdio_status_reg1(3);
-                        for_leds(5) <= mdio_status_reg1(2);
-                        for_leds(6) <= mdio_status_reg1(1);
-                        for_leds(7) <= mdio_status_reg1(0);
-                    else
-                        for_leds(2) <= mdio_status_reg2(13);
-                        for_leds(3) <= mdio_status_reg2(12);
-                        for_leds(4) <= mdio_status_reg2(11);
-                        for_leds(5) <= mdio_status_reg2(10);
-                        for_leds(6) <= mdio_status_reg2(1);
-                        for_leds(7) <= mdio_status_reg2(0);
-                    end if;
+                    case dip_sw(2 downto 0) is
+                        when "000" =>
+                            for_leds(2) <= mdio_status_reg1(5);
+                            for_leds(3) <= mdio_status_reg1(4);
+                            for_leds(4) <= mdio_status_reg1(3);
+                            for_leds(5) <= mdio_status_reg1(2);
+                            for_leds(6) <= mdio_status_reg1(1);
+                            for_leds(7) <= mdio_status_reg1(0);
+                        when "001" =>
+                            for_leds(2) <= mdio_status_reg2(13);
+                            for_leds(3) <= mdio_status_reg2(12);
+                            for_leds(4) <= mdio_status_reg2(11);
+                            for_leds(5) <= mdio_status_reg2(10);
+                            for_leds(6) <= mdio_status_reg2(1);
+                            for_leds(7) <= mdio_status_reg2(0);
+                        when "010" =>
+                            for_leds(2) <= mdio_status_reg3(14);
+                            for_leds(3) <= mdio_status_reg3(13);
+                            for_leds(4) <= mdio_status_reg3(11);
+                            for_leds(5) <= mdio_status_reg3(10);
+                            for_leds(6) <= mdio_status_reg3(9);
+                            for_leds(7) <= mdio_status_reg3(8);
+                        when "011" =>
+                            for_leds(2) <= mdio_status_reg4(15);
+                            for_leds(3) <= mdio_status_reg4(14);
+                            for_leds(4) <= mdio_status_reg4(13);
+                            for_leds(5) <= mdio_status_reg4(12);
+                            for_leds(6) <= mdio_status_reg4(11);
+                            for_leds(7) <= mdio_status_reg4(10);
+                        when "100" =>
+                            for_leds(2) <= '0';
+                            for_leds(3) <= '0';
+                            for_leds(4) <= '0';
+                            for_leds(5) <= '0';
+                            for_leds(6) <= '0';
+                            for_leds(7) <= '0';
+                        when "101" =>
+                            for_leds(2) <= mdio_status_reg5(5);
+                            for_leds(3) <= mdio_status_reg5(4);
+                            for_leds(4) <= mdio_status_reg5(3);
+                            for_leds(5) <= mdio_status_reg5(2);
+                            for_leds(6) <= mdio_status_reg5(1);
+                            for_leds(7) <= mdio_status_reg5(0);
+                        when "110" =>
+                            for_leds(2) <= mdio_status_reg5(10);
+                            for_leds(3) <= mdio_status_reg5(9);
+                            for_leds(4) <= mdio_status_reg5(8);
+                            for_leds(5) <= mdio_status_reg5(7);
+                            for_leds(6) <= mdio_status_reg5(6);
+                            for_leds(7) <= mdio_status_reg5(5);
+                        when "111" =>
+                            for_leds(2) <= mdio_status_reg5(15);
+                            for_leds(3) <= mdio_status_reg5(14);
+                            for_leds(4) <= mdio_status_reg5(13);
+                            for_leds(5) <= mdio_status_reg5(12);
+                            for_leds(6) <= mdio_status_reg5(11);
+                            for_leds(7) <= mdio_status_reg5(10);
+                    end case;
                 end if;
             end if;
         end if;
