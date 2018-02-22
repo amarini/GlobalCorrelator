@@ -82,18 +82,25 @@ architecture Behavioral of vcu118_eth_mdio is
     -- we bit-reverse it in the definition, so that we can send LSB to MSB 
     signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) & -- eable sgmii clk
                                                       encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000" ) & -- disable rgmii
-                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10000", x"0800")    & -- enable sgmii
-                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10100", x"0380")    & -- enable AN and speed opt 
-                                                      encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"0000")    & -- clear error counter 
-                                                      encode_mdio_extreg_write( VCU118_PHYADD, x"0031", x"0160" ) & -- disable rgmii
-                                                      encode_mdio_reg_write( VCU118_PHYADD, b"00000", x"3300")    ; -- enable & restart AN
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10000", x"F860")    & -- enable sgmii
+                                                      --encode_mdio_reg_write( VCU118_PHYADD, b"10100", x"0380")    & -- enable AN and speed opt 
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- NOP 
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- clear error counter 
+                                                      --encode_mdio_extreg_write( VCU118_PHYADD, x"0031", x"0160" ) & -- change autoneg timer
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- NOP 
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- NOP 
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- NOP 
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- NOP 
+                                                      --encode_mdio_reg_write( VCU118_PHYADD, b"00000", x"3300")    ; -- enable & restart AN
+                                                      encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    ; -- NOP 
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
 
     signal mdio_poll_data : std_logic_vector(0 to 319) := encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"01010" ) & -- status register 1
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"00101" ) & -- Auto-Negotiation Link Partner Ability Register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"10001" ) & -- PHY Status Register 
-                                                          encode_mdio_reg_read( VCU118_PHYADD, b"11111" ) ; -- error counter
+                                                          encode_mdio_reg_read( VCU118_PHYADD, b"10101" ) ; -- error counter
+                                                          --encode_mdio_reg_read( VCU118_PHYADD, b"00011" ) ; -- ID ( must return 1010 0010 0011 0001 )
     signal mdio_poll_mask : std_logic_vector(0 to  63) := mdio_reg_read_mask;
     signal mdio_poll_addr : unsigned(8 downto 0) := (others => '0');
     signal mdio_polled_data : std_logic_vector(0 to 320) := (others => '0');
@@ -182,11 +189,11 @@ phy_stat: process(sysclk125)
     begin
         if rising_edge(sysclk125) then
             for I in 15 downto 0 loop
-                status_reg1(I) <= mdio_polled_data(63-I);
-                status_reg2(I) <= mdio_polled_data(127-I);
-                status_reg3(I) <= mdio_polled_data(191-I);
-                status_reg4(I) <= mdio_polled_data(255-I);
-                status_reg5(I) <= mdio_polled_data(319-I);
+                status_reg1(I) <= mdio_polled_data(64-I);
+                status_reg2(I) <= mdio_polled_data(128-I);
+                status_reg3(I) <= mdio_polled_data(192-I);
+                status_reg4(I) <= mdio_polled_data(256-I);
+                status_reg5(I) <= mdio_polled_data(320-I);
             end loop;
         end if;
     end process;
