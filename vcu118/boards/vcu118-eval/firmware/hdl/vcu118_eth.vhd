@@ -116,8 +116,29 @@ architecture rtl of vcu118_eth is
             gmii_rxd : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
             gmii_rx_dv : IN STD_LOGIC;
             gmii_rx_er : IN STD_LOGIC;
-            rx_configuration_vector : IN STD_LOGIC_VECTOR(79 DOWNTO 0);
-            tx_configuration_vector : IN STD_LOGIC_VECTOR(79 DOWNTO 0)
+            mdio_i : in STD_LOGIC;
+            mdio_o : out STD_LOGIC;
+            mdio_t : out STD_LOGIC;
+            mdc : out STD_LOGIC;
+            s_axi_aclk : in STD_LOGIC;
+            s_axi_resetn : in STD_LOGIC;
+            s_axi_awaddr : in STD_LOGIC_VECTOR ( 11 downto 0 );
+            s_axi_awvalid : in STD_LOGIC;
+            s_axi_awready : out STD_LOGIC;
+            s_axi_wdata : in STD_LOGIC_VECTOR ( 31 downto 0 );
+            s_axi_wvalid : in STD_LOGIC;
+            s_axi_wready : out STD_LOGIC;
+            s_axi_bresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
+            s_axi_bvalid : out STD_LOGIC;
+            s_axi_bready : in STD_LOGIC;
+            s_axi_araddr : in STD_LOGIC_VECTOR ( 11 downto 0 );
+            s_axi_arvalid : in STD_LOGIC;
+            s_axi_arready : out STD_LOGIC;
+            s_axi_rdata : out STD_LOGIC_VECTOR ( 31 downto 0 );
+            s_axi_rresp : out STD_LOGIC_VECTOR ( 1 downto 0 );
+            s_axi_rvalid : out STD_LOGIC;
+            s_axi_rready : in STD_LOGIC;
+            mac_irq : out STD_LOGIC
         );
     END COMPONENT;
 
@@ -129,9 +150,6 @@ architecture rtl of vcu118_eth is
             rxp_0 : in STD_LOGIC;
             rxn_0 : in STD_LOGIC;
             signal_detect_0 : in STD_LOGIC;
-            --an_adv_config_vector_0 : in STD_LOGIC_VECTOR( 15 downto 0 );
-            --an_restart_config_0 : in STD_LOGIC;
-            --an_interrupt_0 : out STD_LOGIC;
             gmii_txd_0 : in STD_LOGIC_VECTOR ( 7 downto 0 );
             gmii_tx_en_0 : in STD_LOGIC;
             gmii_tx_er_0 : in STD_LOGIC;
@@ -144,8 +162,23 @@ architecture rtl of vcu118_eth is
             sgmii_clk_en_0 : out STD_LOGIC;
             speed_is_10_100_0 : in STD_LOGIC;
             speed_is_100_0 : in STD_LOGIC;
+            an_interrupt_0 : out STD_LOGIC;
+            an_adv_config_vector_0 : in STD_LOGIC_VECTOR ( 15 downto 0 );
+            an_adv_config_val_0 : in STD_LOGIC;
+            an_restart_config_0 : in STD_LOGIC;
             status_vector_0 : out STD_LOGIC_VECTOR ( 15 downto 0 );
+            ext_mdc_0 : out STD_LOGIC;
+            ext_mdio_i_0 : in STD_LOGIC;
+            ext_mdio_o_0 : out STD_LOGIC;
+            ext_mdio_t_0 : out STD_LOGIC;
+            mdio_t_in_0 : in STD_LOGIC;
+            mdc_0 : in STD_LOGIC;
+            mdio_i_0 : in STD_LOGIC;
+            mdio_o_0 : out STD_LOGIC;
+            mdio_t_0 : out STD_LOGIC;
+            phyaddr_0 : in STD_LOGIC_VECTOR ( 4 downto 0 );
             configuration_vector_0 : in STD_LOGIC_VECTOR ( 4 downto 0 );
+            configuration_valid_0 : in STD_LOGIC;
             refclk625_p : in STD_LOGIC;
             refclk625_n : in STD_LOGIC;
             clk125_out : out STD_LOGIC;
@@ -208,13 +241,38 @@ architecture rtl of vcu118_eth is
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
     signal status_vector : std_logic_vector(15 downto 0);
-    signal mdio_status_reg1, mdio_status_reg2 : std_logic_vector(15 downto 0);
-    signal mdio_done, mdio_poll_done : std_logic;
+    signal mac_mdio_i, mac_mdio_t, mac_mdio_o, mac_mdc : std_logic;
+    signal phy_mdio_i, phy_mdio_t, phy_mdio_o : std_logic;
     signal beat_sysclk125, beat_clk125 : std_logic;
-    signal rx_valid_i : std_logic;
+    signal an_done, rx_valid_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
     signal toggle_leds: std_logic := '0';
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
+
+    signal axi_addr : std_logic_vector(11 downto 0);
+    signal axi_wdata, axi_rdata : std_logic_vector(31 downto 0) := (others => '0');
+    signal axi_wresp, axi_rresp : std_logic_vector(1 downto 0) := (others => '0');
+    signal axi_awvalid, axi_awready : std_logic := '0';
+    signal axi_wvalid, axi_wready : std_logic := '0';
+    signal axi_arvalid, axi_arready : std_logic := '0';
+    signal axi_wresp_valid, axi_rvalid : std_logic := '0';
+
+    signal beat_sysclk125_del, slowedge: std_logic := '0';  -- very slow clock (~Hz), for waiting until device is read
+    signal rst_chain : std_logic_vector(4 downto 0) := (others => '1'); -- delay chain 
+
+    signal axi_prog_done : std_logic := '0';
+    type   axi_prog_state_t is ( DoInit, WaitMDIOReady, MDIOAddReady, MDIODataReady, MDIOWriteDone, ProgDone );
+    signal axi_prog_state : axi_prog_state_t := DoInit;
+
+    constant VCU118_PHYADD : std_logic_vector(4 downto 0) := b"00011";
+    constant AXI_PROG_LENGTH : integer := 4;
+    signal axi_prog_index : integer range 0 to AXI_PROG_LENGTH := 0;
+    signal axi_prog_wait : std_logic := '0';
+    type   axi_prog_reg_t is array(0 to AXI_PROG_LENGTH-1) of std_logic_vector(4 downto 0);
+    type   axi_prog_val_t is array(0 to AXI_PROG_LENGTH-1) of std_logic_vector(15 downto 0);
+    signal axi_prog_reg : axi_prog_reg_t := ( "01101", "01110", "01101", "01110" );
+    signal axi_prog_val : axi_prog_val_t := ( x"001F", x"00D3", x"401F", x"4000" );
+
 begin
 
     ethclk125 <= clk125;
@@ -254,8 +312,30 @@ begin
             gmii_rxd => gmii_rxd,
             gmii_rx_dv => gmii_rx_dv,
             gmii_rx_er => gmii_rx_er,
-            rx_configuration_vector => X"0000_0000_0000_0000_0812",
-            tx_configuration_vector => X"0000_0000_0000_0000_0012"
+            mdio_i => mac_mdio_i,
+            mdio_o => mac_mdio_o,
+            mdio_t => mac_mdio_t,
+            mdc => mac_mdc,
+            s_axi_aclk => sysclk125,
+            s_axi_resetn => rst_phy,
+            s_axi_awaddr => axi_addr, --: in STD_LOGIC_VECTOR ( 11 downto 0 ), -- write addr
+            s_axi_awvalid => axi_awvalid, --: in STD_LOGIC,                                  -- write addr valid
+            s_axi_awready => axi_awready, --: out STD_LOGIC,                                -- write addr ready
+            s_axi_wdata => axi_wdata, --: in STD_LOGIC_VECTOR ( 31 downto 0 );     -- write data
+            s_axi_wvalid => axi_wvalid, --: in STD_LOGIC,                                   -- valid
+            s_axi_wready => axi_wready, --: out STD_LOGIC,                                 -- ready
+            s_axi_bresp => axi_wresp, --: out STD_LOGIC_VECTOR ( 1 downto 0 ),            -- response
+            s_axi_bvalid => axi_wresp_valid, --: out STD_LOGIC,                                 -- valid
+            s_axi_bready => '1', --: in STD_LOGIC,                                -- ready
+            s_axi_araddr => axi_addr, --: in STD_LOGIC_VECTOR ( 11 downto 0 ),   -- read addr
+            s_axi_arvalid => axi_arvalid, -- : in STD_LOGIC,                                   -- valid
+            s_axi_arready => axi_arready, --: out STD_LOGIC,                                  -- ready
+            s_axi_rdata => axi_rdata, --: out STD_LOGIC_VECTOR ( 31 downto 0 ),             -- data
+            s_axi_rresp => axi_rresp, --: out STD_LOGIC_VECTOR ( 1 downto 0 ),              -- response
+            s_axi_rvalid => axi_rvalid, --: out STD_LOGIC,                                   -- valid
+            s_axi_rready => '1', --: in STD_LOGIC,                                     -- ready
+            mac_irq => open  --: out STD_LOGIC
+
         );
     rx_valid <= rx_valid_i;
 
@@ -268,11 +348,6 @@ begin
             rxp_0 => rxp,
             rxn_0 => rxn,
             signal_detect_0 => '1', --?
-            --an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
-            --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
-            --                          -- probably useless as it does not reach the PHY
-            --an_restart_config_0 => '0', --useless, it doesn't reach: the phy
-            --an_interrupt_0 => done, --useless, it doesn't come from the phy
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
             gmii_tx_er_0 => gmii_tx_er,
@@ -285,8 +360,26 @@ begin
             sgmii_clk_en_0 => open, --??
             speed_is_10_100_0 => '0',
             speed_is_100_0 => '0',
+            an_interrupt_0 => an_done, --useless, it doesn't come from the phy
+            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
+                                      -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
+                                      -- probably useless as it does not reach the PHY
+            an_adv_config_val_0 => '1',
+            an_restart_config_0 => '0', --useless, it doesn't reach: the phy
             status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
+
+            ext_mdc_0 => phy_mdc,
+            ext_mdio_i_0 => phy_mdio_i,
+            ext_mdio_o_0 => phy_mdio_o,
+            ext_mdio_t_0 => phy_mdio_t,
+            mdio_t_in_0 => mac_mdio_t,
+            mdc_0 => mac_mdc,
+            mdio_i_0 => mac_mdio_o,
+            mdio_o_0 => mac_mdio_i,
+            mdio_t_0 => open,
+            phyaddr_0 => b"01000", -- must not be 00011 (VCU PHY)
             configuration_vector_0 => b"00000", -- useless, it doesn't reach the PHY
+            configuration_valid_0 => '0',
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
@@ -336,34 +429,26 @@ begin
             --tx_pll_clk_out => 
             --rx_pll_clk_out => 
             --tx_rdclk_out => 
-            reset => not mdio_done -- otherwise we reset the PLLs and they will never lock!
+            reset => '0' -- otherwise we reset the PLLs and they will never lock!
         );
 
 
-    locked_i <= tx_locked and rx_locked and mdio_done;
+    locked_i <= tx_locked and rx_locked;
     locked <= locked_i;
 
-    mdio_mdc: entity work.vcu118_eth_mdio
-        port map ( 
-            sysclk125 => sysclk125,
-            rst_phy => rst_phy,
-            done => mdio_done,
-            poll_done => mdio_poll_done,
-            status_reg1 => mdio_status_reg1,
-            status_reg2 => mdio_status_reg2,
-            phy_mdio => phy_mdio,
-            phy_mdc => phy_mdc);
-                
+    mdio_3st: IOBUF
+        port map( T => phy_mdio_t, I => phy_mdio_o, O => phy_mdio_i, IO => phy_mdio );
+
     phy_on <= '1';
     phy_resetb <= not rst_phy;
 
     -- synchronize reset buttons to clk125
-    capture_reset1: process(clk125,reset_b1)
+    capture_reset1: process(sysclk125,reset_b1)
         begin
             if reset_b1 = '1' then
                 rst_b1_c125_m <= '1'; 
                 rst_b1_c125 <= '1'; 
-            elsif rising_edge(clk125) then
+            elsif rising_edge(sysclk125) then
                 rst_b1_c125_m <= '0';
                 rst_b1_c125 <= rst_b1_c125_m;
             end if;
@@ -377,44 +462,67 @@ begin
         end process;
 
     debug_leds(0) <= locked_i and beat_clk125;
-    debug_leds(1) <= mdio_poll_done;
+    debug_leds(1) <= beat_sysclk125;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
 
-    capture_leds: process(clk125)
+    capture_leds: process(sysclk125)
     begin
-        if rising_edge(clk125) then
+        if rising_edge(sysclk125) then
             if rst_b1_c125 = '1' then
                 for_leds <= (others => '0');
             else
-                if dip_sw(1) = '0' then
-                    if dip_sw(0) = '0' then
-                        if rst125 = '1'     then for_leds(3) <= '1'; end if;
-                        if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
-                        if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
-                        if status_vector(0) = '1' then for_leds(6) <= '1'; end if;
-                        if status_vector(1) = '1' then for_leds(7) <= '1'; end if;
-                    else
-                        if status_vector(2) = '1' then for_leds(3) <= '1'; end if;
-                        if status_vector(3) = '1' then for_leds(4) <= '1'; end if;
-                        if status_vector(4) = '1' then for_leds(5) <= '1'; end if;
-                        if status_vector(5) = '1' then for_leds(6) <= '1'; end if;
-                        if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
+                if dip_sw(3) = '0' then
+                    if dip_sw(1) = '0' then
+                        if dip_sw(0) = '0' then
+                            for_leds(2) <= an_done;
+                            if rst125 = '1'     then for_leds(3) <= '1'; end if;
+                            if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
+                            if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
+                            if status_vector(0) = '1' then for_leds(6) <= '1'; end if;
+                            if status_vector(1) = '1' then for_leds(7) <= '1'; end if;
+                        else
+                            if status_vector(2) = '1' then for_leds(3) <= '1'; end if;
+                            if status_vector(3) = '1' then for_leds(4) <= '1'; end if;
+                            if status_vector(4) = '1' then for_leds(5) <= '1'; end if;
+                            if status_vector(5) = '1' then for_leds(6) <= '1'; end if;
+                            if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
+                        end if;
                     end if;
                 else
-                    if dip_sw(0) = '0' then
-                        for_leds(2) <= mdio_status_reg1(5);
-                        for_leds(3) <= mdio_status_reg1(4);
-                        for_leds(4) <= mdio_status_reg1(3);
-                        for_leds(5) <= mdio_status_reg1(2);
-                        for_leds(6) <= mdio_status_reg1(1);
-                        for_leds(7) <= mdio_status_reg1(0);
+                    if dip_sw(1) = '0' then
+                        for_leds(2) <= axi_prog_done;
+                        for_leds(3) <= axi_prog_wait;
+                        if axi_prog_index > 0 then
+                            for_leds(4) <= '1';
+                        else
+                            for_leds(4) <= '0';
+                        end if;
+                        case axi_prog_state is
+                            when DoInit => for_leds(7 downto 5) <= "000";
+                            when WaitMDIOReady => for_leds(7 downto 5) <= "001";
+                            when MDIOAddReady  => for_leds(7 downto 5) <= "010";
+                            when MDIODataReady => for_leds(7 downto 5) <= "011";
+                            when MDIOWriteDone => for_leds(7 downto 5) <= "101";
+                            when ProgDone => for_leds(7 downto 5) <= "111";
+                        end case;
                     else
-                        for_leds(2) <= mdio_status_reg2(13);
-                        for_leds(3) <= mdio_status_reg2(12);
-                        for_leds(4) <= mdio_status_reg2(11);
-                        for_leds(5) <= mdio_status_reg2(10);
-                        for_leds(6) <= mdio_status_reg2(1);
-                        for_leds(7) <= mdio_status_reg2(0);
+                        --for_leds(2) <= axi_prog_done;
+                        --for_leds(7 downto 3) <= rst_chain(4 downto 0);
+                        if dip_sw(0) = '0' then
+                            for_leds(2) <= axi_awvalid;
+                            for_leds(3) <= axi_awready;
+                            for_leds(4) <= axi_wvalid;
+                            for_leds(5) <= axi_wready;
+                            for_leds(6) <= axi_wresp_valid;
+                            for_leds(7) <= not (axi_wresp(0) or axi_wresp(1));
+                        else
+                            for_leds(2) <= axi_arvalid;
+                            for_leds(3) <= axi_arready;
+                            for_leds(4) <= '0';
+                            for_leds(5) <= '0';
+                            for_leds(6) <= axi_rvalid;
+                            for_leds(7) <= not (axi_rresp(0) or axi_rresp(1));
+                        end if;
                     end if;
                 end if;
             end if;
@@ -426,6 +534,119 @@ begin
     heart_clk125: entity work.ipbus_clock_div
             port map( clk => clk125, d28 => beat_clk125 );
 
+
+    make_slowedge: process(sysclk125)
+        begin
+            if rising_edge(sysclk125) then 
+                beat_sysclk125_del <= beat_sysclk125;
+            end if;
+        end process;
+        slowedge <= '1' when (beat_sysclk125 = '1' and beat_sysclk125_del /= '1') else '0';
+
+    long_wait: process(sysclk125,rst_phy)
+        begin
+            if rst_phy = '1' then
+                rst_chain <= (others => '1');
+            elsif rising_edge(sysclk125) then
+                if slowedge = '1' then
+                   rst_chain(4 downto 0) <= '0' & rst_chain(4 downto 1);
+                end if;
+            end if;
+        end process;
+
+    axi_prog: process(sysclk125)
+    begin
+        if rising_edge(sysclk125) then
+            if rst_chain(0) = '0' then
+                case axi_prog_state is
+                    when DoInit =>
+                        if axi_prog_wait = '0' then
+                            axi_addr <= x"500";
+                            axi_awvalid <= '1';
+                            axi_arvalid <= '0';
+                            axi_wdata <= x"0000005F";
+                            axi_wvalid <= '1';
+                            axi_prog_wait <= '1';
+                        else
+                            if axi_awready = '1' then axi_awvalid <= '0'; end if;
+                            if axi_wready  = '1' then axi_wvalid  <= '0'; end if;
+                            if axi_wresp_valid = '1' then
+                                if axi_wresp = b"00" then
+                                    axi_prog_state <= WaitMDIOReady;
+                                end if;
+                                axi_prog_wait <= '0';
+                            end if;
+                        end if;
+                    when WaitMDIOReady =>
+                        if axi_prog_wait = '0' then
+                            axi_addr <= x"504";
+                            axi_awvalid <= '0';
+                            axi_arvalid <= '1';
+                            axi_wvalid <= '0';
+                            axi_prog_wait <= '1';
+                        else
+                            if axi_arready = '1' then axi_arvalid <= '0'; end if;
+                            if axi_rvalid = '1' then
+                                if axi_wresp = b"00" and axi_rdata(7) = '1' then
+                                    axi_prog_state <= MDIOAddReady;
+                                end if;
+                                axi_prog_wait <= '0';
+                            end if;
+                        end if;
+                    when MDIOAddReady =>
+                        if axi_prog_wait = '1' then
+                            axi_addr <= x"504";
+                            axi_awvalid <= '1';
+                            axi_arvalid <= '0';
+                            axi_wdata <= b"000" & VCU118_PHYADD & b"000" & axi_prog_reg(axi_prog_index) & b"01_00_1_000_0_000_0000";
+                            axi_wvalid <= '1';
+                            axi_prog_wait <= '1';
+                        else
+                            if axi_awready = '1' then axi_awvalid <= '0'; end if;
+                            if axi_wready  = '1' then axi_wvalid  <= '0'; end if;
+                            if axi_wresp_valid = '1' then
+                                if axi_wresp = b"00" then
+                                    axi_prog_state <= MDIODataReady;
+                                end if;
+                                axi_prog_wait <= '0';
+                            end if;
+                        end if;
+                    when MDIODataReady =>
+                        if axi_prog_wait = '1' then
+                            axi_addr <= x"508";
+                            axi_awvalid <= '1';
+                            axi_arvalid <= '0';
+                            axi_wdata <= x"0000" & axi_prog_val(axi_prog_index);
+                            axi_wvalid <= '1';
+                            axi_prog_wait <= '1';
+                        else
+                            if axi_awready = '1' then axi_awvalid <= '0'; end if;
+                            if axi_wready  = '1' then axi_wvalid  <= '0'; end if;
+                            if axi_wresp_valid = '1' then
+                                if axi_wresp = b"00" then
+                                    axi_prog_state <= MDIOWriteDone;
+                                end if;
+                                axi_prog_wait <= '0';
+                            end if;
+                        end if;
+                    when MDIOWriteDone =>
+                        if axi_prog_index = AXI_PROG_LENGTH-1 then
+                            axi_prog_state <= ProgDone;
+                        else
+                            axi_prog_index <= axi_prog_index + 1;
+                            axi_prog_state <= WaitMDIOReady;
+                        end if;
+                    when ProgDone =>
+                        axi_prog_done <= '1';
+                end case;
+           else
+                axi_prog_state <= DoInit;
+                axi_prog_wait <= '0';
+                axi_prog_index <= 0;
+                axi_prog_done <= '0';
+            end if;
+        end if;
+    end process;
 
 
 end rtl;
