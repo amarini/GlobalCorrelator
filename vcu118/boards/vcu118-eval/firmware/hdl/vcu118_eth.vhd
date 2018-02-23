@@ -203,7 +203,8 @@ architecture rtl of vcu118_eth is
 
     signal gmii_txd, gmii_rxd: std_logic_vector(7 downto 0);
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
-    signal gmii_rx_clk: std_logic;
+    signal mac_gmii_txd, mac_gmii_rxd: std_logic_vector(7 downto 0);
+    signal mac_gmii_tx_en, mac_gmii_tx_er, mac_gmii_rx_dv, mac_gmii_rx_er: std_logic;
     signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
@@ -216,7 +217,24 @@ architecture rtl of vcu118_eth is
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
     signal toggle_leds: std_logic := '0';
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
+
+   --signal fake_tx_data:  std_logic_vector(7 downto 0);
+   --signal fake_tx_valid: std_logic;
+   --signal fake_tx_last:  std_logic;
+   --signal fake_tx_error: std_logic;
+   --signal fake_tx_ready: std_logic;
+   --signal fake_rx_data:  std_logic_vector(7 downto 0);
+   --signal fake_rx_valid: std_logic;
+   --signal fake_rx_last:  std_logic;
+   --signal fake_rx_error: std_logic
+
 begin
+    --tx_ready <= '0';
+    --rx_ready <= '0';
+    --rx_last <= '0';
+    --rx_valid <= '0';
+    --rx_error <= '0';
+
 
     ethclk125 <= clk125;
     ethrst125 <= rst125;
@@ -234,7 +252,7 @@ begin
             rx_mac_aclk => open,
             rx_reset => open,
             rx_axis_mac_tdata => rx_data,
-            rx_axis_mac_tvalid => rx_valid_i,
+            rx_axis_mac_tvalid => rx_valid_i, 
             rx_axis_mac_tlast => rx_last,
             rx_axis_mac_tuser => rx_error,
             tx_ifg_delay => X"00",
@@ -249,12 +267,12 @@ begin
             tx_axis_mac_tready => tx_ready,
             pause_req => '0',
             pause_val => X"0000",
-            gmii_txd => gmii_txd,
-            gmii_tx_en => gmii_tx_en,
-            gmii_tx_er => gmii_tx_er,
-            gmii_rxd => gmii_rxd,
-            gmii_rx_dv => gmii_rx_dv,
-            gmii_rx_er => gmii_rx_er,
+            gmii_txd => mac_gmii_txd,
+            gmii_tx_en => mac_gmii_tx_en,
+            gmii_tx_er => mac_gmii_tx_er,
+            gmii_rxd => mac_gmii_rxd,
+            gmii_rx_dv => mac_gmii_rx_dv,
+            gmii_rx_er => mac_gmii_rx_er,
             rx_configuration_vector => X"0000_0000_0000_0000_0812",
             tx_configuration_vector => X"0000_0000_0000_0000_0012"
         );
@@ -475,6 +493,13 @@ begin
             port map( clk => clk125, d28 => beat_clk125 );
 
 
-
+    echo: process(clk125)
+    begin
+        if rising_edge(clk125) then
+            gmii_txd <= gmii_rxd;
+            gmii_tx_en <= gmii_rx_dv;
+            gmii_tx_er <= gmii_rx_er;
+        end if;
+    end process;
 end rtl;
 

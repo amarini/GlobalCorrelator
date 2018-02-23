@@ -100,7 +100,6 @@ architecture Behavioral of vcu118_eth_mdio is
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"00101" ) & -- Auto-Negotiation Link Partner Ability Register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"10001" ) & -- PHY Status Register 
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"10101" ) ; -- error counter
-                                                          --encode_mdio_reg_read( VCU118_PHYADD, b"00011" ) ; -- ID ( must return 1010 0010 0011 0001 )
     signal mdio_poll_mask : std_logic_vector(0 to  63) := mdio_reg_read_mask;
     signal mdio_poll_addr : unsigned(8 downto 0) := (others => '0');
     signal mdio_polled_data : std_logic_vector(0 to 320) := (others => '0');
