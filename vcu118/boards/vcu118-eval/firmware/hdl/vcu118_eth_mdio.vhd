@@ -114,7 +114,8 @@ architecture Behavioral of vcu118_eth_mdio is
     signal mdio_polled_data : std_logic_vector(0 to MDIO_POLL_LENGTH) := (others => '0');
     signal mdio_poll_last, mdio_poll_done : std_logic := '0';
 
-    signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"4000") ;
+    --signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"4000") ;
+    signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"8000") ;
     signal mdio_soft_restart_addr : unsigned(6 downto 0) := (others => '1'); 
 begin
 
@@ -168,15 +169,16 @@ phy_prog: process(sysclk125)
         if rising_edge(sysclk125) then
             if clk2mhz_edge = '1' then
                 if rst_chain(0) = '0' then
-                    if mdio_data_addr(10) = '0' then
-                        mdio_t <= '0'; -- write
-                        mdio_o <= mdio_data(to_integer(mdio_data_addr(9 downto 0)));
-                        mdio_data_addr <= mdio_data_addr + 1;
-                        mdio_poll_last <= slowclk;
-                    elsif mdio_soft_restart_addr(6) = '0' and soft_rst_chain(0) = '0' then
+                    if mdio_soft_restart_addr(6) = '0' and soft_rst_chain(0) = '0' then
                         mdio_t <= '0'; -- write
                         mdio_o <= mdio_soft_restart(to_integer(mdio_soft_restart_addr(5 downto 0)));
                         mdio_soft_restart_addr <= mdio_soft_restart_addr + 1;
+                        mdio_data_addr <= (others => '0');
+                        mdio_poll_last <= slowclk;
+                    elsif mdio_data_addr(10) = '0' then
+                        mdio_t <= '0'; -- write
+                        mdio_o <= mdio_data(to_integer(mdio_data_addr(9 downto 0)));
+                        mdio_data_addr <= mdio_data_addr + 1;
                         mdio_poll_last <= slowclk;
                     else
                        if soft_rst_chain(0) = '1' then

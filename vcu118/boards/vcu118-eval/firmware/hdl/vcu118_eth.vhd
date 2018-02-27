@@ -408,12 +408,12 @@ begin
                             if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
                             if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
                         when "10" =>
-                            for_leds(2) <= beat_clk125;
-                            for_leds(3) <= '0'; --beat_tx_pll;
-                            for_leds(4) <= '0'; --beat_rx_pll;
-                            for_leds(5) <= beat_tx_rd;
-                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
-                            if rx_error_i = '1' then for_leds(7) <= '1'; end if;
+                            for_leds(2) <= status_vector(0);
+                            for_leds(3) <= status_vector(1);
+                            for_leds(4) <= status_vector(7);
+                            for_leds(5) <= status_vector(13);
+                            for_leds(6) <= status_vector(8);
+                            for_leds(7) <= status_vector(9);
                         when "11" =>
                             for_leds(2) <= rst_phy;
                             if req_isol = '1' then for_leds(3) <= '1'; end if;
