@@ -98,14 +98,20 @@ architecture Behavioral of vcu118_eth_mdio is
                                                       encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    ; -- NOP 
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
 
-    signal mdio_poll_data : std_logic_vector(0 to 319) := encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
+    signal MDIO_POLL_LENGTH : integer := 320;
+    signal mdio_poll_data : std_logic_vector(0 to MDIO_POLL_LENGTH-1) := 
+                                                          encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"01010" ) & -- status register 1
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"00101" ) & -- Auto-Negotiation Link Partner Ability Register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"10001" ) & -- PHY Status Register 
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"10101" ) ; -- error counter
-    signal mdio_poll_mask : std_logic_vector(0 to  63) := mdio_reg_read_mask;
+    signal mdio_poll_mask : std_logic_vector(0 to  MDIO_POLL_LENGTH-1) := mdio_reg_read_mask & 
+                                                                          mdio_reg_read_mask &
+                                                                          mdio_reg_read_mask &
+                                                                          mdio_reg_read_mask &
+                                                                          mdio_reg_read_mask ;
     signal mdio_poll_addr : unsigned(8 downto 0) := (others => '0');
-    signal mdio_polled_data : std_logic_vector(0 to 320) := (others => '0');
+    signal mdio_polled_data : std_logic_vector(0 to MDIO_POLL_LENGTH) := (others => '0');
     signal mdio_poll_last, mdio_poll_done : std_logic := '0';
 
     signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"4000") ;
@@ -182,14 +188,14 @@ phy_prog: process(sysclk125)
                            mdio_poll_done <= '0';
                        elsif mdio_poll_done = '0' and poll_enable = '1' then
                            mdio_poll_addr <= mdio_poll_addr + 1;
-                           if mdio_poll_mask(to_integer(mdio_poll_addr(5 downto 0))) = '1' then
+                           if mdio_poll_mask(to_integer(mdio_poll_addr)) = '1' then
                                mdio_t <= '0';
                                mdio_o <= mdio_poll_data(to_integer(mdio_poll_addr));
                             else
                                mdio_t <= '1';
                                mdio_polled_data(to_integer(mdio_poll_addr)) <= mdio_i;
                             end if;
-                            if mdio_poll_addr = to_unsigned(319, 9) then
+                            if mdio_poll_addr = to_unsigned(MDIO_POLL_LENGTH-1, mdio_poll_addr'length) then
                                 mdio_poll_done <= '1';
                             end if;
                        else
