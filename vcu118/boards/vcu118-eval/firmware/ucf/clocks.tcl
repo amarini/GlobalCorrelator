@@ -27,5 +27,8 @@ proc false_path {patt clk} {
 }
 
 false_path {leds[*]} main_clk
-false_path rst_in sys125_clk
+false_path {rst_in[*]} sys125_clk
+false_path {dip_sw[*]} sys125_clk
 false_path phy_resetb sys125_clk
+false_path phy_mdio sys125_clk
+false_path phy_mdc sys125_clk

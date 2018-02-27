@@ -28,10 +28,7 @@ entity top is
     phy_mdio: inout std_logic; -- control line to program the PHY chip
     phy_mdc : out std_logic;   -- clock line (must be < 2.5 MHz)
     -- push button & leds
-    rst_in : in std_logic; -- external reset button
-    rst_in1 : in std_logic; -- external reset button
-    rst_in2 : in std_logic; -- external reset button
-    rst_in3 : in std_logic; -- external reset button
+    rst_in : in std_logic_vector(4 downto 0); -- external reset button
     dip_sw : in std_logic_vector(3 downto 0);
     leds : out std_logic_vector(7 downto 0)
   );
@@ -70,10 +67,11 @@ infra : entity work.vcu118_infra
         clk => clk, clk40 => clk40,
         rst => rst, rst40 => rst40,
         -- reset button
-        reset_button => rst_in,
-        reset_b1 => rst_in1,
-        reset_b2 => rst_in2,
-        reset_b3 => rst_in3,
+        reset_button => rst_in(0),
+        reset_b1 => rst_in(1),
+        reset_b2 => rst_in(2),
+        reset_b3 => rst_in(3),
+        reset_b4 => rst_in(4),
         dip_sw => dip_sw,
         -- ok
         status_ok => open, --leds(1),

@@ -23,6 +23,7 @@ entity vcu118_infra is
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
         reset_b3: in std_logic; -- in case of uneasiness, press this button
+        reset_b4: in std_logic; -- in case of uneasiness, press this button
         dip_sw : in std_logic_vector(3 downto 0);
         -- status ok
         status_ok : out std_logic; -- should be 1 on stable running
@@ -130,6 +131,7 @@ begin
             reset_b1 => reset_b1,
             reset_b2 => reset_b2,
             reset_b3 => reset_b3,
+            reset_b4 => reset_b4,
             dip_sw => dip_sw,
             -- eth clock out
             ethclk125 => ethclk125,

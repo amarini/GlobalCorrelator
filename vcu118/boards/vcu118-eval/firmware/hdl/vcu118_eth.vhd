@@ -66,6 +66,7 @@ entity vcu118_eth is
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
         reset_b3: in std_logic; -- ACME reset button 
+        reset_b4: in std_logic; -- ACME reset button 
         dip_sw : in std_logic_vector(3 downto 0);
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
@@ -352,7 +353,7 @@ begin
     mdio_mdc: entity work.vcu118_eth_mdio
         port map ( 
             sysclk125 => sysclk125,
-            rst_phy => rst_phy,
+            rst_phy => rst_phy or reset_b4,
             done => mdio_done,
             poll_enable => mdio_poll_enable,
             poll_done => mdio_poll_done,
@@ -380,7 +381,7 @@ begin
         end process;
 
     debug_leds(0) <= locked_i and beat_clk125;
-    debug_leds(1) <= mdio_poll_done;
+    debug_leds(1) <= mdio_done;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
 
     capture_leds: process(clk125)
@@ -393,11 +394,11 @@ begin
                     case dip_sw(1 downto 0) is
                         when "00" =>
                             for_leds(2) <= rst125;
-                            if rstn = '0'     then for_leds(3) <= '1'; end if;
-                            if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
-                            if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
-                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
-                            if rx_error_i = '1' then for_leds(7) <= '1'; end if;
+                            for_leds(3) <= rstn;
+                            for_leds(4) <= status_vector(0) and status_vector(1) and status_vector(7);
+                            for_leds(5) <= status_vector(13);
+                            for_leds(6) <= status_vector(8);
+                            for_leds(7) <= status_vector(9);
                         when "01" =>
                             for_leds(2) <= mdio_done;
                             if req_isol = '1' then for_leds(3) <= '1'; end if;
