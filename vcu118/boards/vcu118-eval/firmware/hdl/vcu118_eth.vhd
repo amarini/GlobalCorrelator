@@ -354,6 +354,7 @@ begin
         port map ( 
             sysclk125 => sysclk125,
             rst_phy => rst_phy or reset_b4,
+            soft_restart => reset_b1,
             done => mdio_done,
             poll_enable => mdio_poll_enable,
             poll_done => mdio_poll_done,
