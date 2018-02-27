@@ -212,11 +212,11 @@ architecture rtl of vcu118_eth is
     signal status_vector : std_logic_vector(15 downto 0);
     signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
     signal mdio_done, mdio_poll_done : std_logic;
-    signal beat_sysclk125, beat_clk125 : std_logic;
-    signal rx_valid_i : std_logic;
+    signal beat_sysclk125, beat_clk125, beat_tx_pll, beat_tx_rd, beat_rx_pll: std_logic;
+    signal rx_valid_i, rx_error_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
-    signal toggle_leds: std_logic := '0';
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
+    signal rx_req_reset, tx_req_reset, req_isol, tx_rdclk_out, tx_pll_clk_out, rx_pll_clk_out : std_logic := '0';
 
    --signal fake_tx_data:  std_logic_vector(7 downto 0);
    --signal fake_tx_valid: std_logic;
@@ -254,7 +254,7 @@ begin
             rx_axis_mac_tdata => rx_data,
             rx_axis_mac_tvalid => rx_valid_i, 
             rx_axis_mac_tlast => rx_last,
-            rx_axis_mac_tuser => rx_error,
+            rx_axis_mac_tuser => rx_error_i,
             tx_ifg_delay => X"00",
             tx_statistics_vector => open,
             tx_statistics_valid => open,
@@ -267,16 +267,17 @@ begin
             tx_axis_mac_tready => tx_ready,
             pause_req => '0',
             pause_val => X"0000",
-            gmii_txd => mac_gmii_txd,
-            gmii_tx_en => mac_gmii_tx_en,
-            gmii_tx_er => mac_gmii_tx_er,
-            gmii_rxd => mac_gmii_rxd,
-            gmii_rx_dv => mac_gmii_rx_dv,
-            gmii_rx_er => mac_gmii_rx_er,
-            rx_configuration_vector => X"0000_0000_0000_0000_0812",
-            tx_configuration_vector => X"0000_0000_0000_0000_0012"
+            gmii_txd => gmii_txd,
+            gmii_tx_en => gmii_tx_en,
+            gmii_tx_er => gmii_tx_er,
+            gmii_rxd => gmii_rxd,
+            gmii_rx_dv => gmii_rx_dv,
+            gmii_rx_er => gmii_rx_er,
+            rx_configuration_vector => X"0000_0000_0000_0000_0B02",
+            tx_configuration_vector => X"0000_0000_0000_0000_0002"
         );
     rx_valid <= rx_valid_i;
+    rx_error <= rx_error_i;
 
     sgmii: sgmii_adapter_lvds_0
         port map ( 
@@ -286,11 +287,11 @@ begin
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => '1', --?
-            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
+            signal_detect_0 => mdio_status_reg1(2), --?
+            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'0', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
-            an_restart_config_0 => '0', --useless, it doesn't reach: the phy
+            an_restart_config_0 => '0', --useless, it doesn't reach the phy
             an_interrupt_0 => an_done, --useless, it doesn't come from the phy
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
@@ -298,19 +299,19 @@ begin
             gmii_rxd_0 => gmii_rxd,
             gmii_rx_dv_0 => gmii_rx_dv,
             gmii_rx_er_0 => gmii_rx_er,
-            gmii_isolate_0 => open,
+            gmii_isolate_0 => req_isol,
             sgmii_clk_r_0 => open, --??
             sgmii_clk_f_0 => open, --??
             sgmii_clk_en_0 => open, --??
             speed_is_10_100_0 => '0',
             speed_is_100_0 => '0',
             status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
-            configuration_vector_0 => b"00000", -- useless, it doesn't reach the PHY
+            configuration_vector_0 => (4 => '1', 3 => not(mdio_done), others => '0'),
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
-            --tx_logic_reset => 
-            --rx_logic_reset => 
+            tx_logic_reset => tx_req_reset,
+            rx_logic_reset => rx_req_reset,
             rx_locked => rx_locked,
             tx_locked => tx_locked,
             --tx_bsc_rst_out => 
@@ -352,9 +353,9 @@ begin
             rx_dly_rdy_3 => '1',
             rx_vtc_rdy_3 => '1',
             tx_vtc_rdy_3 => '1',
-            --tx_pll_clk_out => 
-            --rx_pll_clk_out => 
-            --tx_rdclk_out => 
+            --tx_pll_clk_out => tx_pll_clk_out,
+            --rx_pll_clk_out => rx_pll_clk_out,
+            tx_rdclk_out => tx_rdclk_out,
             reset => not mdio_done -- otherwise we reset the PLLs and they will never lock!
         );
 
@@ -391,13 +392,6 @@ begin
             end if;
         end process;
 
-    toggle_led: process(sysclk125)
-        begin
-            if rising_edge(sysclk125) then
-                toggle_leds <= dip_sw(0);
-            end if;
-        end process;
-
     debug_leds(0) <= locked_i and beat_clk125;
     debug_leds(1) <= mdio_poll_done;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
@@ -409,20 +403,36 @@ begin
                 for_leds <= (others => '0');
             else
                 if dip_sw(3) = '0' then
-                    if dip_sw(0) = '0' then
-                        for_leds(2) <= an_done;
-                        if rst125 = '1'     then for_leds(3) <= '1'; end if;
-                        if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
-                        if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
-                        if status_vector(0) = '1' then for_leds(6) <= '1'; end if;
-                        if status_vector(1) = '1' then for_leds(7) <= '1'; end if;
-                    else
-                        if status_vector(2) = '1' then for_leds(3) <= '1'; end if;
-                        if status_vector(3) = '1' then for_leds(4) <= '1'; end if;
-                        if status_vector(4) = '1' then for_leds(5) <= '1'; end if;
-                        if status_vector(5) = '1' then for_leds(6) <= '1'; end if;
-                        if status_vector(6) = '1' then for_leds(7) <= '1'; end if;
-                    end if;
+                    case dip_sw(1 downto 0) is
+                        when "00" =>
+                            for_leds(2) <= rst125;
+                            if rst125 = '1'     then for_leds(3) <= '1'; end if;
+                            if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
+                            if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
+                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
+                            if rx_error_i = '1' then for_leds(7) <= '1'; end if;
+                        when "01" =>
+                            for_leds(2) <= mdio_done;
+                            if req_isol = '1' then for_leds(3) <= '1'; end if;
+                            if rx_req_reset = '1' then for_leds(4) <= '1'; end if;
+                            if tx_req_reset = '1' then for_leds(5) <= '1'; end if;
+                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
+                            if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
+                        when "10" =>
+                            for_leds(2) <= beat_clk125;
+                            for_leds(3) <= '0'; --beat_tx_pll;
+                            for_leds(4) <= '0'; --beat_rx_pll;
+                            for_leds(5) <= beat_tx_rd;
+                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
+                            if rx_error_i = '1' then for_leds(7) <= '1'; end if;
+                        when "11" =>
+                            for_leds(2) <= rst_phy;
+                            if req_isol = '1' then for_leds(3) <= '1'; end if;
+                            if rx_req_reset = '1' then for_leds(4) <= '1'; end if;
+                            if tx_req_reset = '1' then for_leds(5) <= '1'; end if;
+                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
+                            if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
+                    end case;
                 else
                     case dip_sw(2 downto 0) is
                         when "000" =>
@@ -492,14 +502,24 @@ begin
     heart_clk125: entity work.ipbus_clock_div
             port map( clk => clk125, d28 => beat_clk125 );
 
+    --heart_tx_pll: entity work.ipbus_clock_div
+    --        port map( clk => tx_pll_clk_out, d28 => beat_tx_pll );
+    heart_tx_rd: entity work.ipbus_clock_div
+            port map( clk => tx_rdclk_out, d28 => beat_tx_rd );
 
-    echo: process(clk125)
-    begin
-        if rising_edge(clk125) then
-            gmii_txd <= gmii_rxd;
-            gmii_tx_en <= gmii_rx_dv;
-            gmii_tx_er <= gmii_rx_er;
-        end if;
-    end process;
+
+    --heart_rx_pll: entity work.ipbus_clock_div
+    --        port map( clk => rx_pll_clk_out, d28 => beat_rx_pll );
+
+
+
+    --echo: process(clk125)
+    --begin
+    --    if rising_edge(clk125) then
+    --        gmii_txd <= gmii_rxd;
+    --        gmii_tx_en <= gmii_rx_dv;
+    --        gmii_tx_er <= gmii_rx_er;
+    --    end if;
+    --end process;
 end rtl;
 
