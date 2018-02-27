@@ -80,7 +80,7 @@ architecture Behavioral of vcu118_eth_mdio is
     -- see https://www.xilinx.com/support/answers/69494.html, and data sheet of TI DP83867, section 8.6.40 "SGMII Control Register 1"
     -- also, disable RGMII mode (unclear if it's needed)
     -- we bit-reverse it in the definition, so that we can send LSB to MSB 
-    signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) & -- eable sgmii clk
+    signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) & -- enable sgmii clk
                                                       encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000" ) & -- disable rgmii
                                                       encode_mdio_reg_write( VCU118_PHYADD, b"10000", x"F860")    & -- enable sgmii
                                                       --encode_mdio_reg_write( VCU118_PHYADD, b"10100", x"0380")    & -- enable AN and speed opt 

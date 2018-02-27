@@ -218,28 +218,11 @@ architecture rtl of vcu118_eth is
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
     signal rx_req_reset, tx_req_reset, req_isol, tx_rdclk_out, tx_pll_clk_out, rx_pll_clk_out : std_logic := '0';
 
-   --signal fake_tx_data:  std_logic_vector(7 downto 0);
-   --signal fake_tx_valid: std_logic;
-   --signal fake_tx_last:  std_logic;
-   --signal fake_tx_error: std_logic;
-   --signal fake_tx_ready: std_logic;
-   --signal fake_rx_data:  std_logic_vector(7 downto 0);
-   --signal fake_rx_valid: std_logic;
-   --signal fake_rx_last:  std_logic;
-   --signal fake_rx_error: std_logic
-
 begin
-    --tx_ready <= '0';
-    --rx_ready <= '0';
-    --rx_last <= '0';
-    --rx_valid <= '0';
-    --rx_error <= '0';
-
-
     ethclk125 <= clk125;
     ethrst125 <= rst125;
     
-    rstn <= not (rst or rst125 or not locked_i);
+    rstn <= not (rst or rst125 or (not locked_i) or reset_b2);
 
     mac: temac_gbe_v9_0
         port map(
@@ -502,24 +485,10 @@ begin
     heart_clk125: entity work.ipbus_clock_div
             port map( clk => clk125, d28 => beat_clk125 );
 
-    --heart_tx_pll: entity work.ipbus_clock_div
-    --        port map( clk => tx_pll_clk_out, d28 => beat_tx_pll );
     heart_tx_rd: entity work.ipbus_clock_div
             port map( clk => tx_rdclk_out, d28 => beat_tx_rd );
 
 
-    --heart_rx_pll: entity work.ipbus_clock_div
-    --        port map( clk => rx_pll_clk_out, d28 => beat_rx_pll );
 
-
-
-    --echo: process(clk125)
-    --begin
-    --    if rising_edge(clk125) then
-    --        gmii_txd <= gmii_rxd;
-    --        gmii_tx_en <= gmii_rx_dv;
-    --        gmii_tx_er <= gmii_rx_er;
-    --    end if;
-    --end process;
 end rtl;
 
