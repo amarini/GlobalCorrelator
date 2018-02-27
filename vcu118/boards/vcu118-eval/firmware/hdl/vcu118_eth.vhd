@@ -65,6 +65,7 @@ entity vcu118_eth is
         debug_leds: out std_logic_vector(7 downto 0);
         reset_b1: in std_logic; -- in case of worry, press this button
         reset_b2: in std_logic; -- in case of uneasiness, press this button
+        reset_b3: in std_logic; -- ACME reset button 
         dip_sw : in std_logic_vector(3 downto 0);
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
@@ -211,7 +212,7 @@ architecture rtl of vcu118_eth is
     signal an_done : std_logic;
     signal status_vector : std_logic_vector(15 downto 0);
     signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
-    signal mdio_done, mdio_poll_done : std_logic;
+    signal mdio_done, mdio_poll_done, mdio_poll_enable : std_logic;
     signal beat_sysclk125, beat_clk125, beat_tx_pll, beat_tx_rd, beat_rx_pll: std_logic;
     signal rx_valid_i, rx_error_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
@@ -270,7 +271,7 @@ begin
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => mdio_status_reg1(2), --?
+            signal_detect_0 => mdio_status_reg1(2) or not(mdio_poll_enable), --?
             an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'0', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
@@ -339,18 +340,21 @@ begin
             --tx_pll_clk_out => tx_pll_clk_out,
             --rx_pll_clk_out => rx_pll_clk_out,
             tx_rdclk_out => tx_rdclk_out,
-            reset => not mdio_done -- otherwise we reset the PLLs and they will never lock!
+            reset => (not mdio_done) or reset_b3 -- otherwise we reset the PLLs and they will never lock!
         );
 
 
     locked_i <= tx_locked and rx_locked and mdio_done;
     locked <= locked_i;
 
+    mdio_poll_enable <= dip_sw(3);
+
     mdio_mdc: entity work.vcu118_eth_mdio
         port map ( 
             sysclk125 => sysclk125,
             rst_phy => rst_phy,
             done => mdio_done,
+            poll_enable => mdio_poll_enable,
             poll_done => mdio_poll_done,
             status_reg1 => mdio_status_reg1,
             status_reg2 => mdio_status_reg2,
@@ -385,11 +389,11 @@ begin
             if rst_b1_c125 = '1' then
                 for_leds <= (others => '0');
             else
-                if dip_sw(3) = '0' then
+                if dip_sw(2) = '0' then
                     case dip_sw(1 downto 0) is
                         when "00" =>
                             for_leds(2) <= rst125;
-                            if rst125 = '1'     then for_leds(3) <= '1'; end if;
+                            if rstn = '0'     then for_leds(3) <= '1'; end if;
                             if gmii_rx_dv = '1' then for_leds(4) <= '1'; end if;
                             if gmii_rx_er = '1' then for_leds(5) <= '1'; end if;
                             if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
@@ -417,63 +421,63 @@ begin
                             if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
                     end case;
                 else
-                    case dip_sw(2 downto 0) is
-                        when "000" =>
+                    case dip_sw(1 downto 0) is
+                        when "00" =>
                             for_leds(2) <= mdio_status_reg1(5);
                             for_leds(3) <= mdio_status_reg1(4);
                             for_leds(4) <= mdio_status_reg1(3);
                             for_leds(5) <= mdio_status_reg1(2);
                             for_leds(6) <= mdio_status_reg1(1);
                             for_leds(7) <= mdio_status_reg1(0);
-                        when "001" =>
+                        when "01" =>
                             for_leds(2) <= mdio_status_reg2(13);
                             for_leds(3) <= mdio_status_reg2(12);
                             for_leds(4) <= mdio_status_reg2(11);
                             for_leds(5) <= mdio_status_reg2(10);
                             for_leds(6) <= mdio_status_reg2(1);
                             for_leds(7) <= mdio_status_reg2(0);
-                        when "010" =>
+                        when "10" =>
                             for_leds(2) <= mdio_status_reg3(14);
                             for_leds(3) <= mdio_status_reg3(13);
                             for_leds(4) <= mdio_status_reg3(11);
                             for_leds(5) <= mdio_status_reg3(10);
                             for_leds(6) <= mdio_status_reg3(9);
                             for_leds(7) <= mdio_status_reg3(8);
-                        when "011" =>
+                        when "11" =>
                             for_leds(2) <= mdio_status_reg4(15);
                             for_leds(3) <= mdio_status_reg4(14);
                             for_leds(4) <= mdio_status_reg4(13);
                             for_leds(5) <= mdio_status_reg4(12);
                             for_leds(6) <= mdio_status_reg4(11);
                             for_leds(7) <= mdio_status_reg4(10);
-                        when "100" =>
-                            for_leds(2) <= '0';
-                            for_leds(3) <= '0';
-                            for_leds(4) <= '0';
-                            for_leds(5) <= '0';
-                            for_leds(6) <= '0';
-                            for_leds(7) <= '0';
-                        when "101" =>
-                            for_leds(2) <= mdio_status_reg5(5);
-                            for_leds(3) <= mdio_status_reg5(4);
-                            for_leds(4) <= mdio_status_reg5(3);
-                            for_leds(5) <= mdio_status_reg5(2);
-                            for_leds(6) <= mdio_status_reg5(1);
-                            for_leds(7) <= mdio_status_reg5(0);
-                        when "110" =>
-                            for_leds(2) <= mdio_status_reg5(10);
-                            for_leds(3) <= mdio_status_reg5(9);
-                            for_leds(4) <= mdio_status_reg5(8);
-                            for_leds(5) <= mdio_status_reg5(7);
-                            for_leds(6) <= mdio_status_reg5(6);
-                            for_leds(7) <= mdio_status_reg5(5);
-                        when "111" =>
-                            for_leds(2) <= mdio_status_reg5(15);
-                            for_leds(3) <= mdio_status_reg5(14);
-                            for_leds(4) <= mdio_status_reg5(13);
-                            for_leds(5) <= mdio_status_reg5(12);
-                            for_leds(6) <= mdio_status_reg5(11);
-                            for_leds(7) <= mdio_status_reg5(10);
+                      -- when "100" =>
+                      --     for_leds(2) <= '0';
+                      --     for_leds(3) <= '0';
+                      --     for_leds(4) <= '0';
+                      --     for_leds(5) <= '0';
+                      --     for_leds(6) <= '0';
+                      --     for_leds(7) <= '0';
+                      -- when "101" =>
+                      --     for_leds(2) <= mdio_status_reg5(5);
+                      --     for_leds(3) <= mdio_status_reg5(4);
+                      --     for_leds(4) <= mdio_status_reg5(3);
+                      --     for_leds(5) <= mdio_status_reg5(2);
+                      --     for_leds(6) <= mdio_status_reg5(1);
+                      --     for_leds(7) <= mdio_status_reg5(0);
+                      -- when "110" =>
+                      --     for_leds(2) <= mdio_status_reg5(10);
+                      --     for_leds(3) <= mdio_status_reg5(9);
+                      --     for_leds(4) <= mdio_status_reg5(8);
+                      --     for_leds(5) <= mdio_status_reg5(7);
+                      --     for_leds(6) <= mdio_status_reg5(6);
+                      --     for_leds(7) <= mdio_status_reg5(5);
+                      -- when "111" =>
+                      --     for_leds(2) <= mdio_status_reg5(15);
+                      --     for_leds(3) <= mdio_status_reg5(14);
+                      --     for_leds(4) <= mdio_status_reg5(13);
+                      --     for_leds(5) <= mdio_status_reg5(12);
+                      --     for_leds(6) <= mdio_status_reg5(11);
+                      --     for_leds(7) <= mdio_status_reg5(10);
                     end case;
                 end if;
             end if;

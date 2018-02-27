@@ -11,6 +11,7 @@ entity vcu118_eth_mdio is
     sysclk125: in std_logic; -- clock
     rst_phy:   in std_logic; -- reset signal of the phy (sync to sysclk125)
     done:      out std_logic; -- phy was programmed successfully
+    poll_enable : in std_logic;
     poll_done:   out std_logic; -- phy was polled successfully
     status_reg1: out std_logic_vector(15 downto 0); -- phy status reg 1
     status_reg2: out std_logic_vector(15 downto 0); -- phy status reg 2
@@ -157,7 +158,7 @@ phy_prog: process(sysclk125)
                            mdio_poll_addr <= (others => '0');
                            mdio_poll_last <= slowclk;
                            mdio_poll_done <= '0';
-                       elsif mdio_poll_done = '0' then
+                       elsif mdio_poll_done = '0' and poll_enable = '1' then
                            mdio_poll_addr <= mdio_poll_addr + 1;
                            if mdio_poll_mask(to_integer(mdio_poll_addr(5 downto 0))) = '1' then
                                mdio_t <= '0';
