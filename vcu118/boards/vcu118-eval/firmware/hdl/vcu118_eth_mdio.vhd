@@ -98,7 +98,7 @@ architecture Behavioral of vcu118_eth_mdio is
                                                       encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    ; -- NOP 
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
 
-    signal MDIO_POLL_LENGTH : integer := 320;
+    constant MDIO_POLL_LENGTH : integer := 320;
     signal mdio_poll_data : std_logic_vector(0 to MDIO_POLL_LENGTH-1) := 
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"00001" ) & -- basic mode status register
                                                           encode_mdio_reg_read( VCU118_PHYADD, b"01010" ) & -- status register 1
