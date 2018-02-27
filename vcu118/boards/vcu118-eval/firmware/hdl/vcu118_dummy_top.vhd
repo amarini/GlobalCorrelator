@@ -185,7 +185,7 @@ architecture Behavioral of top is
                 encode_mdio_reg_write( phyad, MDIO_REG_0xE, data ) ;
     end;
     -- normal operation
-    signal mdio_data_0 : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) & -- eable sgmii clk
+    signal mdio_data_0 : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) & -- enable sgmii clk
                                                         encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000" ) & -- disable rgmii
                                                         encode_mdio_reg_write( VCU118_PHYADD, b"10000", x"0800")    & -- enable sgmii
                                                         encode_mdio_reg_write( VCU118_PHYADD, b"10101", x"0000")    & -- clear error counter 
@@ -243,7 +243,7 @@ architecture Behavioral of top is
     signal tx_clock_u, rx_clock_u, tx_clock, rx_clock, slowtx, slowrx : std_logic := '0';
     signal tx_reset_out, rx_reset_out : std_logic := '1';
     signal led_reset_rx, led_reset_tx, led_reset_eth : std_logic_vector(1 downto 0) := (others => '0');
-    signal mac_resetn_async : std_logic := '0';
+    signal mac_reset_async : std_logic := '0';
     signal mac_resetn : std_logic_vector(4 downto 0) := (others => '0');
     signal sgmii_signal_detect : std_logic := '0';
     signal sgmii_reset : std_logic := '1';
@@ -339,10 +339,10 @@ led_reset_sync_eth: process(clketh,rst_in1)
     end process;
 
             -- synchronize reset buttons to clk125
-mac_resetn_async <= (phy_prog_done and rx_locked and tx_locked and (not rsteth) and (not rst_in2));
-mac_resetn_sync: process(clketh,mac_resetn_async)
+mac_reset_async <= not(phy_prog_done and rx_locked and tx_locked) or rsteth or rst_in2;
+mac_resetn_sync: process(clketh,mac_reset_async)
     begin
-        if mac_resetn_async = '0' then
+        if mac_reset_async = '1' then
             mac_resetn <= (others => '0');
         elsif rising_edge(clketh) then
             if eth17_edge = '1' then
@@ -414,9 +414,9 @@ rxblink: entity work.ipbus_clock_div
                 when "000" =>
                     leds(0) <= sloweth;
                     leds(1) <= rst_chain(4);
-                    leds(2) <= rst_chain(3);
-                    leds(3) <= rst_chain(1);
-                    leds(4) <= rst_chain(0);
+                    leds(2) <= rst_chain(0);
+                    leds(3) <= mac_reset_async;
+                    leds(4) <= rsteth;
                     leds(5) <= phy_prog_done;
                     leds(6) <= mac_resetn(1);
                     leds(7) <= mac_resetn(0);
@@ -505,9 +505,17 @@ rxblink: entity work.ipbus_clock_div
     buf_rx_clock : BUFG port map ( I => rx_clock_u, O => rx_clock);
 
 
-    sgmii_signal_detect <= not rst_chain(0);
-    sgmii_configuration_vector <= (4 => '1', 3 => not(phy_prog_done), others => '0');
-    sgmii_reset <= not phy_prog_done;
+
+conf_sgmii: process(sysclk125)
+    begin
+        if rising_edge(sysclk125) then
+            sgmii_signal_detect <= not rst_chain(0);
+            sgmii_configuration_vector(3) <= not(phy_prog_done);
+            sgmii_configuration_vector(4) <= '1';
+            sgmii_reset <= not phy_prog_done;
+        end if;
+    end process;
+   
     sgmii: sgmii_adapter_lvds_0_core
         port map ( 
             refclk625_p => clk625_p,
@@ -517,7 +525,7 @@ rxblink: entity work.ipbus_clock_div
             rxp_0 => rxp,
             rxn_0 => rxn,
             signal_detect_0 => sgmii_signal_detect, --?
-            an_adv_config_vector_0 => b"1001_1000_0000_0001", -- 0:SGMII: 10-11: 1000Mbps 12: Full Duplex  14: ACK 15: Link up 
+            an_adv_config_vector_0 => b"1101_1000_0000_0001", -- 0:SGMII: 10-11: 1000Mbps 12: Full Duplex  14: ACK 15: Link up 
             an_restart_config_0 => '0', --useless, it doesn't reach: the phy
             an_interrupt_0 => open, --useless, it doesn't come from the phy
             gmii_txd_0 => gmii_txd,

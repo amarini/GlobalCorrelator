@@ -35,6 +35,8 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
 
 library unisim;
 use unisim.vcomponents.all;
@@ -246,7 +248,6 @@ architecture rtl of vcu118_eth is
     signal beat_sysclk125, beat_clk125 : std_logic;
     signal an_done, rx_valid_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
-    signal toggle_leds: std_logic := '0';
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
 
     signal axi_addr : std_logic_vector(11 downto 0);
@@ -255,7 +256,8 @@ architecture rtl of vcu118_eth is
     signal axi_awvalid, axi_awready : std_logic := '0';
     signal axi_wvalid, axi_wready : std_logic := '0';
     signal axi_arvalid, axi_arready : std_logic := '0';
-    signal axi_wresp_valid, axi_rvalid : std_logic := '0';
+    signal axi_wresp_ready, axi_wresp_valid, axi_rvalid : std_logic := '0';
+    signal axi_mdio_enable, axi_mdio_enabled : std_logic := '0';
 
     signal beat_sysclk125_del, slowedge: std_logic := '0';  -- very slow clock (~Hz), for waiting until device is read
     signal rst_chain : std_logic_vector(4 downto 0) := (others => '1'); -- delay chain 
@@ -273,12 +275,41 @@ architecture rtl of vcu118_eth is
     signal axi_prog_reg : axi_prog_reg_t := ( "01101", "01110", "01101", "01110" );
     signal axi_prog_val : axi_prog_val_t := ( x"001F", x"00D3", x"401F", x"4000" );
 
+    signal phy_pre_done, phy_mdio_t_pre, phy_mdio_t_core, phy_mdio_o_pre, phy_mdio_o_core, phy_mdc_pre, phy_mdc_core : std_logic;
+    signal clk2mhz, clk2mhz_del, clk2mhz_edge: std_logic := '0'; -- slow generated clocks
+    
+    constant MDIO_REG_0xD : std_logic_vector(4 downto 0) := b"01101";
+    constant MDIO_REG_0xE : std_logic_vector(4 downto 0) := b"01110";
+    constant MDIO_WRITE_ADDR : std_logic_vector(15 downto 0) := b"00_000000000_11111";
+    constant MDIO_WRITE_VALUE : std_logic_vector(15 downto 0) := b"01_000000000_11111";
+
+    function encode_mdio_reg_write( phyad : std_logic_vector(4 downto 0); 
+                                    regad : std_logic_vector(4 downto 0);
+                                    data  : std_logic_vector(15 downto 0))
+                                    return std_logic_vector is
+    begin
+        return x"FFFF_FFFF" & b"01" & b"01" & phyad & regad & b"10" & data;
+    end;
+    function encode_mdio_extreg_write( phyad : std_logic_vector(4 downto 0); 
+                                    extreg : std_logic_vector(15 downto 0);
+                                    data   : std_logic_vector(15 downto 0))
+                                    return std_logic_vector is
+    begin
+        return  encode_mdio_reg_write( phyad, MDIO_REG_0xD, MDIO_WRITE_ADDR ) &
+                encode_mdio_reg_write( phyad, MDIO_REG_0xE, extreg ) &
+                encode_mdio_reg_write( phyad, MDIO_REG_0xD, MDIO_WRITE_VALUE ) &
+                encode_mdio_reg_write( phyad, MDIO_REG_0xE, data ) ;
+    end;
+    -- normal operation
+    signal mdio_data : std_logic_vector(0 to 255) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000" ) ; -- eable sgmii clk
+    signal mdio_data_addr : unsigned(8 downto 0) := (others => '0');
+
 begin
 
     ethclk125 <= clk125;
     ethrst125 <= rst125;
     
-    rstn <= not (rst or rst125 or not locked_i);
+    rstn <= not (rst or rst125 or rst_chain(3) or not locked_i);
 
     mac: temac_gbe_v9_0
         port map(
@@ -317,7 +348,7 @@ begin
             mdio_t => mac_mdio_t,
             mdc => mac_mdc,
             s_axi_aclk => sysclk125,
-            s_axi_resetn => rst_phy,
+            s_axi_resetn => rst_chain(3),
             s_axi_awaddr => axi_addr, --: in STD_LOGIC_VECTOR ( 11 downto 0 ), -- write addr
             s_axi_awvalid => axi_awvalid, --: in STD_LOGIC,                                  -- write addr valid
             s_axi_awready => axi_awready, --: out STD_LOGIC,                                -- write addr ready
@@ -326,7 +357,7 @@ begin
             s_axi_wready => axi_wready, --: out STD_LOGIC,                                 -- ready
             s_axi_bresp => axi_wresp, --: out STD_LOGIC_VECTOR ( 1 downto 0 ),            -- response
             s_axi_bvalid => axi_wresp_valid, --: out STD_LOGIC,                                 -- valid
-            s_axi_bready => '1', --: in STD_LOGIC,                                -- ready
+            s_axi_bready => axi_wresp_ready, --: in STD_LOGIC,                                -- ready
             s_axi_araddr => axi_addr, --: in STD_LOGIC_VECTOR ( 11 downto 0 ),   -- read addr
             s_axi_arvalid => axi_arvalid, -- : in STD_LOGIC,                                   -- valid
             s_axi_arready => axi_arready, --: out STD_LOGIC,                                  -- ready
@@ -368,10 +399,10 @@ begin
             an_restart_config_0 => '0', --useless, it doesn't reach: the phy
             status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
 
-            ext_mdc_0 => phy_mdc,
+            ext_mdc_0 => phy_mdc_core,
             ext_mdio_i_0 => phy_mdio_i,
-            ext_mdio_o_0 => phy_mdio_o,
-            ext_mdio_t_0 => phy_mdio_t,
+            ext_mdio_o_0 => phy_mdio_o_core,
+            ext_mdio_t_0 => phy_mdio_t_core,
             mdio_t_in_0 => mac_mdio_t,
             mdc_0 => mac_mdc,
             mdio_i_0 => mac_mdio_o,
@@ -436,6 +467,9 @@ begin
     locked_i <= tx_locked and rx_locked;
     locked <= locked_i;
 
+    phy_mdio_t <= phy_mdio_t_core when phy_pre_done = '1' else phy_mdio_t_pre;
+    phy_mdio_o <= phy_mdio_o_core when phy_pre_done = '1' else phy_mdio_o_pre;
+    phy_mdc <= phy_mdc_core when phy_pre_done = '1' else phy_mdc_pre;
     mdio_3st: IOBUF
         port map( T => phy_mdio_t, I => phy_mdio_o, O => phy_mdio_i, IO => phy_mdio );
 
@@ -454,14 +488,7 @@ begin
             end if;
         end process;
 
-    toggle_led: process(sysclk125)
-        begin
-            if rising_edge(sysclk125) then
-                toggle_leds <= dip_sw(0);
-            end if;
-        end process;
-
-    debug_leds(0) <= locked_i and beat_clk125;
+    debug_leds(0) <= phy_pre_done and locked_i and beat_clk125;
     debug_leds(1) <= beat_sysclk125;
     debug_leds(7 downto 2) <= for_leds(7 downto 2);
 
@@ -518,8 +545,8 @@ begin
                         else
                             for_leds(2) <= axi_arvalid;
                             for_leds(3) <= axi_arready;
-                            for_leds(4) <= '0';
-                            for_leds(5) <= '0';
+                            for_leds(4) <= axi_mdio_enable;
+                            for_leds(5) <= axi_mdio_enabled;
                             for_leds(6) <= axi_rvalid;
                             for_leds(7) <= not (axi_rresp(0) or axi_rresp(1));
                         end if;
@@ -530,7 +557,7 @@ begin
     end process;
 
     heart_sysclk125: entity work.ipbus_clock_div
-            port map( clk => sysclk125, d28 => beat_sysclk125 );
+            port map( clk => sysclk125, d7 => clk2mhz, d28 => beat_sysclk125 );
     heart_clk125: entity work.ipbus_clock_div
             port map( clk => clk125, d28 => beat_clk125 );
 
@@ -543,9 +570,18 @@ begin
         end process;
         slowedge <= '1' when (beat_sysclk125 = '1' and beat_sysclk125_del /= '1') else '0';
 
-    long_wait: process(sysclk125,rst_phy)
+    make_2mhzedge: process(sysclk125)
+    begin
+        if rising_edge(sysclk125) then
+            clk2mhz_del <= clk2mhz;
+        end if;
+    end process;
+        clk2mhz_edge <= '1' when (clk2mhz = '1' and clk2mhz_del /= '1') else '0';
+
+
+    long_wait: process(sysclk125,rst_phy,reset_b1)
         begin
-            if rst_phy = '1' then
+            if rst_phy = '1' or reset_b1 = '1' then
                 rst_chain <= (others => '1');
             elsif rising_edge(sysclk125) then
                 if slowedge = '1' then
@@ -557,7 +593,7 @@ begin
     axi_prog: process(sysclk125)
     begin
         if rising_edge(sysclk125) then
-            if rst_chain(0) = '0' then
+            if rst_chain(0) = '0' and phy_pre_done = '1' then
                 case axi_prog_state is
                     when DoInit =>
                         if axi_prog_wait = '0' then
@@ -567,10 +603,13 @@ begin
                             axi_wdata <= x"0000005F";
                             axi_wvalid <= '1';
                             axi_prog_wait <= '1';
+                            axi_mdio_enable  <= '1';
+                            axi_mdio_enabled <= '0';
                         else
                             if axi_awready = '1' then axi_awvalid <= '0'; end if;
                             if axi_wready  = '1' then axi_wvalid  <= '0'; end if;
-                            if axi_wresp_valid = '1' then
+                            axi_wresp_ready = not(axi_awvalid or axi_wvalid);
+                            if axi_wresp_valid = '1' and axi_wresp_ready = '1' then
                                 if axi_wresp = b"00" then
                                     axi_prog_state <= WaitMDIOReady;
                                 end if;
@@ -578,6 +617,7 @@ begin
                             end if;
                         end if;
                     when WaitMDIOReady =>
+                        axi_mdio_enabled <= '1';
                         if axi_prog_wait = '0' then
                             axi_addr <= x"504";
                             axi_awvalid <= '0';
@@ -644,10 +684,38 @@ begin
                 axi_prog_wait <= '0';
                 axi_prog_index <= 0;
                 axi_prog_done <= '0';
+                axi_mdio_enable  <= '0';
+                axi_mdio_enabled <= '0';
             end if;
         end if;
     end process;
 
+    phy_prog: process(sysclk125,rst_phy)
+    begin
+        if rst_phy = '1' then
+            mdio_data_addr <= (others => '0');
+            phy_mdio_t_pre <= '1'; -- read/dont-care
+            phy_pre_done <= '0';
+        elsif rising_edge(sysclk125) then
+            if clk2mhz_edge = '1' then
+                if rst_chain(3 downto 0) = b"0000" then
+                    if mdio_data_addr(8) = '0' then
+                        phy_mdio_t_pre <= '0'; -- write
+                        phy_mdio_o_pre <= mdio_data(to_integer(mdio_data_addr(7 downto 0)));
+                        mdio_data_addr <= mdio_data_addr + 1;
+                    else
+                        phy_pre_done <= '1';
+                        phy_mdio_t_pre <= '1'; -- read/dont-care
+                    end if;
+                else
+                    mdio_data_addr <= (others => '0');
+                    phy_mdio_t_pre <= '1'; -- read/dont-care
+                    phy_pre_done <= '0';
+                end if;
+            end if;
+        end if;
+    end process;
+    phy_mdc_pre <= clk2mhz;
 
 end rtl;
 
