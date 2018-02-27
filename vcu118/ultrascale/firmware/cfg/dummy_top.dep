@@ -1,0 +1,3 @@
+setup settings.tcl
+
+include -c boards/vcu118-eval dummy_top.dep

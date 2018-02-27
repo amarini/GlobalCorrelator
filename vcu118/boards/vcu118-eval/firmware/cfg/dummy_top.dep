@@ -1,0 +1,17 @@
+@device_name = "xcvu9p"
+@device_package = "-flga2104"
+@device_speed = "-2L-e"
+
+setup settings.tcl
+
+src -c ipbus-firmware:components/ipbus_util ipbus_clock_div.vhd
+#src -c ipbus-firmware:components/ipbus_util led_stretcher.vhd
+
+src --cd ../ucf dummy.xdc
+# src --cd ../ucf eth.xdc
+src --cd ../ucf dummy.tcl
+
+src ../cgn/sgmii_adapter_lvds_0_core.xci
+src -c ipbus-firmware:components/ipbus_eth ../cgn/temac_gbe_v9_0.xci
+
+src vcu118_dummy_top.vhd
