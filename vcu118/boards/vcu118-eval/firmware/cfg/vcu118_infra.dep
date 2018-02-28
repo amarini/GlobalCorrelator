@@ -17,6 +17,7 @@ src vcu118_eth.vhd
 
 src -c ipbus-firmware:components/ipbus_eth ../cgn/temac_gbe_v9_0.xci
 src ../cgn/sgmii_adapter_lvds_0.xci
+#src ../cgn/sgmii_adapter_lvds_0_noan.xci
 
 src --cd ../ucf clocks.tcl
 src --cd ../ucf pins.xdc

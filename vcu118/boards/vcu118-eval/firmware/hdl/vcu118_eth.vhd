@@ -40,6 +40,9 @@ library unisim;
 use unisim.vcomponents.all;
 
 entity vcu118_eth is
+    generic(
+        SGMII_CORE_AN : std_logic := '1'
+    );
     port(
         -- clock and data i/o (connected to external device)
         clk625_p : in std_logic; --> 625 MHz clock
@@ -202,6 +205,82 @@ architecture rtl of vcu118_eth is
             reset : in STD_LOGIC
         );
     END COMPONENT;
+    COMPONENT sgmii_adapter_lvds_0_noan
+        PORT ( 
+            txp_0 : out STD_LOGIC;
+            txn_0 : out STD_LOGIC;
+            rxp_0 : in STD_LOGIC;
+            rxn_0 : in STD_LOGIC;
+            signal_detect_0 : in STD_LOGIC;
+            gmii_txd_0 : in STD_LOGIC_VECTOR ( 7 downto 0 );
+            gmii_tx_en_0 : in STD_LOGIC;
+            gmii_tx_er_0 : in STD_LOGIC;
+            gmii_rxd_0 : out STD_LOGIC_VECTOR ( 7 downto 0 );
+            gmii_rx_dv_0 : out STD_LOGIC;
+            gmii_rx_er_0 : out STD_LOGIC;
+            gmii_isolate_0 : out STD_LOGIC;
+            sgmii_clk_r_0 : out STD_LOGIC;
+            sgmii_clk_f_0 : out STD_LOGIC;
+            sgmii_clk_en_0 : out STD_LOGIC;
+            speed_is_10_100_0 : in STD_LOGIC;
+            speed_is_100_0 : in STD_LOGIC;
+            status_vector_0 : out STD_LOGIC_VECTOR ( 15 downto 0 );
+            configuration_vector_0 : in STD_LOGIC_VECTOR ( 4 downto 0 );
+            refclk625_p : in STD_LOGIC;
+            refclk625_n : in STD_LOGIC;
+            clk125_out : out STD_LOGIC;
+            clk312_out : out STD_LOGIC;
+            rst_125_out : out STD_LOGIC;
+            tx_logic_reset : out STD_LOGIC;
+            rx_logic_reset : out STD_LOGIC;
+            rx_locked : out STD_LOGIC;
+            tx_locked : out STD_LOGIC;
+            tx_bsc_rst_out : out STD_LOGIC;
+            rx_bsc_rst_out : out STD_LOGIC;
+            tx_bs_rst_out : out STD_LOGIC;
+            rx_bs_rst_out : out STD_LOGIC;
+            tx_rst_dly_out : out STD_LOGIC;
+            rx_rst_dly_out : out STD_LOGIC;
+            tx_bsc_en_vtc_out : out STD_LOGIC;
+            rx_bsc_en_vtc_out : out STD_LOGIC;
+            tx_bs_en_vtc_out : out STD_LOGIC;
+            rx_bs_en_vtc_out : out STD_LOGIC;
+            riu_clk_out : out STD_LOGIC;
+            riu_addr_out : out STD_LOGIC_VECTOR ( 5 downto 0 );
+            riu_wr_data_out : out STD_LOGIC_VECTOR ( 15 downto 0 );
+            riu_wr_en_out : out STD_LOGIC;
+            riu_nibble_sel_out : out STD_LOGIC_VECTOR ( 1 downto 0 );
+            riu_rddata_3 : in STD_LOGIC_VECTOR ( 15 downto 0 );
+            riu_valid_3 : in STD_LOGIC;
+            riu_prsnt_3 : in STD_LOGIC;
+            riu_rddata_2 : in STD_LOGIC_VECTOR ( 15 downto 0 );
+            riu_valid_2 : in STD_LOGIC;
+            riu_prsnt_2 : in STD_LOGIC;
+            riu_rddata_1 : in STD_LOGIC_VECTOR ( 15 downto 0 );
+            riu_valid_1 : in STD_LOGIC;
+            riu_prsnt_1 : in STD_LOGIC;
+            rx_btval_3 : out STD_LOGIC_VECTOR ( 8 downto 0 );
+            rx_btval_2 : out STD_LOGIC_VECTOR ( 8 downto 0 );
+            rx_btval_1 : out STD_LOGIC_VECTOR ( 8 downto 0 );
+            tx_dly_rdy_1 : in STD_LOGIC;
+            rx_dly_rdy_1 : in STD_LOGIC;
+            rx_vtc_rdy_1 : in STD_LOGIC;
+            tx_vtc_rdy_1 : in STD_LOGIC;
+            tx_dly_rdy_2 : in STD_LOGIC;
+            rx_dly_rdy_2 : in STD_LOGIC;
+            rx_vtc_rdy_2 : in STD_LOGIC;
+            tx_vtc_rdy_2 : in STD_LOGIC;
+            tx_dly_rdy_3 : in STD_LOGIC;
+            rx_dly_rdy_3 : in STD_LOGIC;
+            rx_vtc_rdy_3 : in STD_LOGIC;
+            tx_vtc_rdy_3 : in STD_LOGIC;
+            tx_pll_clk_out : out STD_LOGIC;
+            rx_pll_clk_out : out STD_LOGIC;
+            tx_rdclk_out : out STD_LOGIC;
+            reset : in STD_LOGIC
+        );
+    END COMPONENT;
+
 
     signal gmii_txd, gmii_rxd: std_logic_vector(7 downto 0);
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
@@ -264,6 +343,7 @@ begin
     rx_valid <= rx_valid_i;
     rx_error <= rx_error_i;
 
+gen_sgmii_an: if SGMII_CORE_AN = '1' generate
     sgmii: sgmii_adapter_lvds_0
         port map ( 
             refclk625_p => clk625_p,
@@ -343,7 +423,84 @@ begin
             tx_rdclk_out => tx_rdclk_out,
             reset => (not mdio_done) or reset_b3 -- otherwise we reset the PLLs and they will never lock!
         );
+    end generate;
 
+gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
+    sgmii: sgmii_adapter_lvds_0_noan
+        port map ( 
+            refclk625_p => clk625_p,
+            refclk625_n => clk625_n,
+            txp_0 => txp,
+            txn_0 => txn,
+            rxp_0 => rxp,
+            rxn_0 => rxn,
+            signal_detect_0 => mdio_status_reg1(2) or not(mdio_poll_enable), --?
+            gmii_txd_0 => gmii_txd,
+            gmii_tx_en_0 => gmii_tx_en,
+            gmii_tx_er_0 => gmii_tx_er,
+            gmii_rxd_0 => gmii_rxd,
+            gmii_rx_dv_0 => gmii_rx_dv,
+            gmii_rx_er_0 => gmii_rx_er,
+            gmii_isolate_0 => req_isol,
+            sgmii_clk_r_0 => open, --??
+            sgmii_clk_f_0 => open, --??
+            sgmii_clk_en_0 => open, --??
+            speed_is_10_100_0 => '0',
+            speed_is_100_0 => '0',
+            status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
+            configuration_vector_0 => (4 => '0', 3 => not(mdio_done), others => '0'),
+            clk125_out => clk125,
+            --clk312_out => clk312,
+            rst_125_out => rst125, 
+            tx_logic_reset => tx_req_reset,
+            rx_logic_reset => rx_req_reset,
+            rx_locked => rx_locked,
+            tx_locked => tx_locked,
+            --tx_bsc_rst_out => 
+            --rx_bsc_rst_out => 
+            --tx_bs_rst_out => 
+            --rx_bs_rst_out => 
+            --tx_rst_dly_out => 
+            --rx_rst_dly_out => 
+            --tx_bsc_en_vtc_out => 
+            --rx_bsc_en_vtc_out => 
+            --tx_bs_en_vtc_out => 
+            --rx_bs_en_vtc_out => 
+            --riu_clk_out => 
+            --riu_addr_out => 
+            --riu_wr_data_out => 
+            --riu_wr_en_out => 
+            --riu_nibble_sel_out => 
+            riu_rddata_3 => X"0000",
+            riu_valid_3 => '0',
+            riu_prsnt_3 => '0',
+            riu_rddata_2 => X"0000",
+            riu_valid_2 => '0',
+            riu_prsnt_2 => '0',
+            riu_rddata_1 => X"0000",
+            riu_valid_1 => '0',
+            riu_prsnt_1 => '0',
+            --rx_btval_3 => 
+            --rx_btval_2 => 
+            --rx_btval_1 => 
+            tx_dly_rdy_1 => '1',
+            rx_dly_rdy_1 => '1',
+            rx_vtc_rdy_1 => '1',
+            tx_vtc_rdy_1 => '1',
+            tx_dly_rdy_2 => '1',
+            rx_dly_rdy_2 => '1',
+            rx_vtc_rdy_2 => '1',
+            tx_vtc_rdy_2 => '1',
+            tx_dly_rdy_3 => '1',
+            rx_dly_rdy_3 => '1',
+            rx_vtc_rdy_3 => '1',
+            tx_vtc_rdy_3 => '1',
+            --tx_pll_clk_out => tx_pll_clk_out,
+            --rx_pll_clk_out => rx_pll_clk_out,
+            tx_rdclk_out => tx_rdclk_out,
+            reset => (not mdio_done) or reset_b3 -- otherwise we reset the PLLs and they will never lock!
+        );
+    end generate;
 
     locked_i <= tx_locked and rx_locked and mdio_done;
     locked <= locked_i;
@@ -415,12 +572,12 @@ begin
                             for_leds(6) <= status_vector(8);
                             for_leds(7) <= status_vector(9);
                         when "11" =>
-                            for_leds(2) <= rst_phy;
-                            if req_isol = '1' then for_leds(3) <= '1'; end if;
-                            if rx_req_reset = '1' then for_leds(4) <= '1'; end if;
-                            if tx_req_reset = '1' then for_leds(5) <= '1'; end if;
-                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
-                            if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
+                            for_leds(2) <= status_vector(2);
+                            for_leds(3) <= status_vector(3);
+                            for_leds(4) <= status_vector(4);
+                            for_leds(5) <= status_vector(5);
+                            for_leds(6) <= status_vector(6);
+                            for_leds(7) <= rstn;
                     end case;
                 else
                     case dip_sw(1 downto 0) is
