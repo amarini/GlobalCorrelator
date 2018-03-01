@@ -85,12 +85,12 @@ architecture Behavioral of vcu118_eth_mdio is
     -- we bit-reverse it in the definition, so that we can send LSB to MSB 
     -- try follow 8-13 of https://forums.xilinx.com/t5/Xilinx-Boards-and-Kits/VCU118-SGMII-Ethernet/td-p/801826
     signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000") & -- enable sgmii clk
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "00000", x"1140") & -- enable Gigabit, Auto-negotiation and full-duplex 
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10100", x"29C7") & -- enable speed optimization at 10Base-Te, SGMII auto-negotiation, enhanced speed optimization, 4 speed optimization retries and low interrupt polarity 
                                                       encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000") & -- disable rgmii
                                                       encode_mdio_reg_write(    VCU118_PHYADD, "10000", x"0800") & -- enable sgmii
-                                                      encode_mdio_extreg_write( VCU118_PHYADD, x"0031", x"1170") & -- set the SGMII auto-negotiation timer to 11 ms and perform the software workaround mentioned in AR #69494 because the TI PHY is not strapped to mode 3
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") ; -- NOP 
+                                                      encode_mdio_extreg_write( VCU118_PHYADD, x"0031", x"0170") & -- set the SGMII auto-negotiation timer to 11 ms and perform the software workaround mentioned in AR #69494 because the TI PHY is not strapped to mode 3
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "00000", x"1340") ; -- re-trigger AN
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
 
     constant MDIO_POLL_LENGTH : integer := 320;
