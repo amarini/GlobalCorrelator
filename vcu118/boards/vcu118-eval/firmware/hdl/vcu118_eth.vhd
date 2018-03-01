@@ -35,6 +35,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -286,10 +287,14 @@ architecture rtl of vcu118_eth is
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
     signal mac_gmii_txd, mac_gmii_rxd: std_logic_vector(7 downto 0);
     signal mac_gmii_tx_en, mac_gmii_tx_er, mac_gmii_rx_dv, mac_gmii_rx_er: std_logic;
-    signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
+    signal clk125, rst125, ethkhz, ethkhz_del, ethkhz_edge, rx_locked, tx_locked, locked_i, rstn: std_logic;
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
     signal an_done : std_logic;
+    signal auto_restart : std_logic := '0';
+    signal auto_restart_q, auto_restart_next : std_logic := '0';
+    signal auto_restarts : unsigned(3 downto 0) := (others => '0');
+    signal latch_link_ok, latch_link_fail : std_logic_vector(2 downto 0) := (others => '0');
     signal status_vector : std_logic_vector(15 downto 0);
     signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
     signal mdio_done, mdio_poll_done, mdio_poll_enable : std_logic;
@@ -352,7 +357,7 @@ gen_sgmii_an: if SGMII_CORE_AN = '1' generate
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => mdio_status_reg1(2) or not(mdio_poll_enable), --?
+            signal_detect_0 => '1', --mdio_status_reg1(2) or not(mdio_poll_enable), --?
             an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'0', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
@@ -434,7 +439,7 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => mdio_status_reg1(2) or not(mdio_poll_enable), --?
+            signal_detect_0 => '1', --mdio_status_reg1(2) or not(mdio_poll_enable), --?
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
             gmii_tx_er_0 => gmii_tx_er,
@@ -505,12 +510,12 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
     locked_i <= tx_locked and rx_locked and mdio_done;
     locked <= locked_i;
 
-    mdio_poll_enable <= dip_sw(3);
+    mdio_poll_enable <= '1';
 
     mdio_mdc: entity work.vcu118_eth_mdio
         port map ( 
             sysclk125 => sysclk125,
-            rst_phy => rst_phy or reset_b4,
+            rst_phy => rst_phy or reset_b4 or (auto_restart and dip_sw(3)),
             soft_restart => reset_b1,
             done => mdio_done,
             poll_enable => mdio_poll_enable,
@@ -525,6 +530,53 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
                 
     phy_on <= '1';
     phy_resetb <= not rst_phy;
+
+    latch_failure_config: process(clk125,rst125)
+        variable link_ok, link_fail : std_logic;
+    begin
+        if rst125 = '1' then
+            latch_link_ok   <= (others => '0');
+            latch_link_fail <= (others => '0');
+        end if;
+        if rising_edge(clk125) then
+            if mdio_done = '1' then
+                link_ok   := status_vector(1) and status_vector(1) and status_vector(7) and status_vector(3);
+                link_fail := status_vector(1) and (not status_vector(0)) and status_vector(2);
+                latch_link_ok(0) <= link_ok;
+                latch_link_fail(0) <= link_fail;
+                for I in 2 downto 1 loop
+                    if ethkhz_edge = '1' then 
+                        latch_link_ok(I) <= latch_link_ok(I-1); 
+                        latch_link_fail(I) <= latch_link_fail(I-1) and not link_ok;
+                    else
+                        latch_link_fail(I) <= latch_link_fail(I) and not link_ok;
+                    end if;
+                end loop;
+            end if;
+       end if;
+    end process;
+
+    auto_restart_trigger: process(sysclk125)
+        begin
+            if rising_edge(sysclk125) then
+                if auto_restart_q = '1' then
+                    if auto_restart_next = beat_sysclk125 then
+                        auto_restart <= '1';
+                        auto_restart_q <= '0';
+                    end if;
+                elsif (latch_link_ok(2) and latch_link_fail(2)) = '1' then
+                    if auto_restarts(3) = '0' then
+                        auto_restart_q <= '1';
+                        auto_restart_next <= not beat_sysclk125;
+                    end if;
+                end if;
+                if auto_restart = '1' then
+                    auto_restart_q <= '0';
+                    auto_restart_next <= '0';
+                    auto_restarts <= auto_restarts + 1;
+                end if;
+            end if;
+        end process;
 
     -- synchronize reset buttons to clk125
     capture_reset1: process(clk125,reset_b1)
@@ -552,11 +604,11 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
                     case dip_sw(1 downto 0) is
                         when "00" =>
                             for_leds(2) <= rst125;
-                            for_leds(3) <= rstn;
-                            for_leds(4) <= status_vector(0) and status_vector(1) and status_vector(7);
-                            for_leds(5) <= status_vector(13);
-                            for_leds(6) <= status_vector(8);
-                            for_leds(7) <= status_vector(9);
+                            for_leds(3) <= auto_restart_q;
+                            for_leds(4) <= auto_restarts(0);
+                            for_leds(5) <= auto_restarts(1);
+                            for_leds(6) <= auto_restarts(2);
+                            for_leds(7) <= auto_restarts(3);
                         when "01" =>
                             for_leds(2) <= mdio_done;
                             if req_isol = '1' then for_leds(3) <= '1'; end if;
@@ -646,7 +698,16 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
     heart_sysclk125: entity work.ipbus_clock_div
             port map( clk => sysclk125, d28 => beat_sysclk125 );
     heart_clk125: entity work.ipbus_clock_div
-            port map( clk => clk125, d28 => beat_clk125 );
+            port map( clk => clk125, d17 => ethkhz, d28 => beat_clk125 );
+    make_khzedge: process(clk125)
+        begin
+            if rising_edge(clk125) then
+                ethkhz_del <= ethkhz;
+            end if;
+        end process;
+        ethkhz_edge <= '1' when (ethkhz = '1' and ethkhz_del /= '1') else '0';
+
+
 
     heart_tx_rd: entity work.ipbus_clock_div
             port map( clk => tx_rdclk_out, d28 => beat_tx_rd );
