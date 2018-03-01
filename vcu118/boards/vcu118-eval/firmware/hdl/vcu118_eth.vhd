@@ -41,9 +41,6 @@ library unisim;
 use unisim.vcomponents.all;
 
 entity vcu118_eth is
-    generic(
-        SGMII_CORE_AN : std_logic := '1'
-    );
     port(
         -- clock and data i/o (connected to external device)
         clk625_p : in std_logic; --> 625 MHz clock
@@ -206,99 +203,19 @@ architecture rtl of vcu118_eth is
             reset : in STD_LOGIC
         );
     END COMPONENT;
-    COMPONENT sgmii_adapter_lvds_0_noan
-        PORT ( 
-            txp_0 : out STD_LOGIC;
-            txn_0 : out STD_LOGIC;
-            rxp_0 : in STD_LOGIC;
-            rxn_0 : in STD_LOGIC;
-            signal_detect_0 : in STD_LOGIC;
-            gmii_txd_0 : in STD_LOGIC_VECTOR ( 7 downto 0 );
-            gmii_tx_en_0 : in STD_LOGIC;
-            gmii_tx_er_0 : in STD_LOGIC;
-            gmii_rxd_0 : out STD_LOGIC_VECTOR ( 7 downto 0 );
-            gmii_rx_dv_0 : out STD_LOGIC;
-            gmii_rx_er_0 : out STD_LOGIC;
-            gmii_isolate_0 : out STD_LOGIC;
-            sgmii_clk_r_0 : out STD_LOGIC;
-            sgmii_clk_f_0 : out STD_LOGIC;
-            sgmii_clk_en_0 : out STD_LOGIC;
-            speed_is_10_100_0 : in STD_LOGIC;
-            speed_is_100_0 : in STD_LOGIC;
-            status_vector_0 : out STD_LOGIC_VECTOR ( 15 downto 0 );
-            configuration_vector_0 : in STD_LOGIC_VECTOR ( 4 downto 0 );
-            refclk625_p : in STD_LOGIC;
-            refclk625_n : in STD_LOGIC;
-            clk125_out : out STD_LOGIC;
-            clk312_out : out STD_LOGIC;
-            rst_125_out : out STD_LOGIC;
-            tx_logic_reset : out STD_LOGIC;
-            rx_logic_reset : out STD_LOGIC;
-            rx_locked : out STD_LOGIC;
-            tx_locked : out STD_LOGIC;
-            tx_bsc_rst_out : out STD_LOGIC;
-            rx_bsc_rst_out : out STD_LOGIC;
-            tx_bs_rst_out : out STD_LOGIC;
-            rx_bs_rst_out : out STD_LOGIC;
-            tx_rst_dly_out : out STD_LOGIC;
-            rx_rst_dly_out : out STD_LOGIC;
-            tx_bsc_en_vtc_out : out STD_LOGIC;
-            rx_bsc_en_vtc_out : out STD_LOGIC;
-            tx_bs_en_vtc_out : out STD_LOGIC;
-            rx_bs_en_vtc_out : out STD_LOGIC;
-            riu_clk_out : out STD_LOGIC;
-            riu_addr_out : out STD_LOGIC_VECTOR ( 5 downto 0 );
-            riu_wr_data_out : out STD_LOGIC_VECTOR ( 15 downto 0 );
-            riu_wr_en_out : out STD_LOGIC;
-            riu_nibble_sel_out : out STD_LOGIC_VECTOR ( 1 downto 0 );
-            riu_rddata_3 : in STD_LOGIC_VECTOR ( 15 downto 0 );
-            riu_valid_3 : in STD_LOGIC;
-            riu_prsnt_3 : in STD_LOGIC;
-            riu_rddata_2 : in STD_LOGIC_VECTOR ( 15 downto 0 );
-            riu_valid_2 : in STD_LOGIC;
-            riu_prsnt_2 : in STD_LOGIC;
-            riu_rddata_1 : in STD_LOGIC_VECTOR ( 15 downto 0 );
-            riu_valid_1 : in STD_LOGIC;
-            riu_prsnt_1 : in STD_LOGIC;
-            rx_btval_3 : out STD_LOGIC_VECTOR ( 8 downto 0 );
-            rx_btval_2 : out STD_LOGIC_VECTOR ( 8 downto 0 );
-            rx_btval_1 : out STD_LOGIC_VECTOR ( 8 downto 0 );
-            tx_dly_rdy_1 : in STD_LOGIC;
-            rx_dly_rdy_1 : in STD_LOGIC;
-            rx_vtc_rdy_1 : in STD_LOGIC;
-            tx_vtc_rdy_1 : in STD_LOGIC;
-            tx_dly_rdy_2 : in STD_LOGIC;
-            rx_dly_rdy_2 : in STD_LOGIC;
-            rx_vtc_rdy_2 : in STD_LOGIC;
-            tx_vtc_rdy_2 : in STD_LOGIC;
-            tx_dly_rdy_3 : in STD_LOGIC;
-            rx_dly_rdy_3 : in STD_LOGIC;
-            rx_vtc_rdy_3 : in STD_LOGIC;
-            tx_vtc_rdy_3 : in STD_LOGIC;
-            tx_pll_clk_out : out STD_LOGIC;
-            rx_pll_clk_out : out STD_LOGIC;
-            tx_rdclk_out : out STD_LOGIC;
-            reset : in STD_LOGIC
-        );
-    END COMPONENT;
-
 
     signal gmii_txd, gmii_rxd: std_logic_vector(7 downto 0);
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
     signal mac_gmii_txd, mac_gmii_rxd: std_logic_vector(7 downto 0);
     signal mac_gmii_tx_en, mac_gmii_tx_er, mac_gmii_rx_dv, mac_gmii_rx_er: std_logic;
-    signal clk125, rst125, ethkhz, ethkhz_del, ethkhz_edge, rx_locked, tx_locked, locked_i, rstn: std_logic;
+    signal clk125, rst125, rx_locked, tx_locked, locked_i, rstn: std_logic;
     signal rx_statistics_vector : std_logic_vector(27 downto 0);
     signal rx_statistics_valid : std_logic;
-    signal an_done : std_logic;
-    signal auto_restart : std_logic := '0';
-    signal auto_restart_q, auto_restart_next : std_logic := '0';
-    signal auto_restarts : unsigned(3 downto 0) := (others => '0');
-    signal latch_link_ok, latch_link_fail : std_logic_vector(2 downto 0) := (others => '0');
+    signal an_restart, an_restart_d, an_done : std_logic := '0';
     signal status_vector : std_logic_vector(15 downto 0);
     signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
-    signal mdio_done, mdio_poll_done, mdio_poll_enable : std_logic;
-    signal beat_sysclk125, beat_clk125, beat_tx_pll, beat_tx_rd, beat_rx_pll: std_logic;
+    signal mdio_done, mdio_done_d, mdio_poll_done, mdio_poll_enable : std_logic := '0';
+    signal beat_sysclk125, beat_sysclk125_del, slowedge, beat_clk125, beat_tx_pll, beat_tx_rd, beat_rx_pll: std_logic;
     signal rx_valid_i, rx_error_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
@@ -348,7 +265,6 @@ begin
     rx_valid <= rx_valid_i;
     rx_error <= rx_error_i;
 
-gen_sgmii_an: if SGMII_CORE_AN = '1' generate
     sgmii: sgmii_adapter_lvds_0
         port map ( 
             refclk625_p => clk625_p,
@@ -357,11 +273,11 @@ gen_sgmii_an: if SGMII_CORE_AN = '1' generate
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => '1', --mdio_status_reg1(2) or not(mdio_poll_enable), --?
-            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'0', 15=>'1', others=>'0'),
+            signal_detect_0 => mdio_status_reg1(2) or dip_sw(3), -- or not(mdio_poll_enable), --?
+            an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
-            an_restart_config_0 => '0', --useless, it doesn't reach the phy
+            an_restart_config_0 => an_restart, --useless, it doesn't reach the phy
             an_interrupt_0 => an_done, --useless, it doesn't come from the phy
             gmii_txd_0 => gmii_txd,
             gmii_tx_en_0 => gmii_tx_en,
@@ -376,7 +292,7 @@ gen_sgmii_an: if SGMII_CORE_AN = '1' generate
             speed_is_10_100_0 => '0',
             speed_is_100_0 => '0',
             status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
-            configuration_vector_0 => (4 => '1', 3 => not(mdio_done), others => '0'),
+            configuration_vector_0 => (4 => '1', others => '0'),
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
@@ -426,86 +342,8 @@ gen_sgmii_an: if SGMII_CORE_AN = '1' generate
             --tx_pll_clk_out => tx_pll_clk_out,
             --rx_pll_clk_out => rx_pll_clk_out,
             tx_rdclk_out => tx_rdclk_out,
-            reset => (not mdio_done) or reset_b3 -- otherwise we reset the PLLs and they will never lock!
+            reset => not (dip_sw(3) or mdio_done) -- otherwise we reset the PLLs and they will never lock!
         );
-    end generate;
-
-gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
-    sgmii: sgmii_adapter_lvds_0_noan
-        port map ( 
-            refclk625_p => clk625_p,
-            refclk625_n => clk625_n,
-            txp_0 => txp,
-            txn_0 => txn,
-            rxp_0 => rxp,
-            rxn_0 => rxn,
-            signal_detect_0 => '1', --mdio_status_reg1(2) or not(mdio_poll_enable), --?
-            gmii_txd_0 => gmii_txd,
-            gmii_tx_en_0 => gmii_tx_en,
-            gmii_tx_er_0 => gmii_tx_er,
-            gmii_rxd_0 => gmii_rxd,
-            gmii_rx_dv_0 => gmii_rx_dv,
-            gmii_rx_er_0 => gmii_rx_er,
-            gmii_isolate_0 => req_isol,
-            sgmii_clk_r_0 => open, --??
-            sgmii_clk_f_0 => open, --??
-            sgmii_clk_en_0 => open, --??
-            speed_is_10_100_0 => '0',
-            speed_is_100_0 => '0',
-            status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
-            configuration_vector_0 => (4 => '0', 3 => not(mdio_done), others => '0'),
-            clk125_out => clk125,
-            --clk312_out => clk312,
-            rst_125_out => rst125, 
-            tx_logic_reset => tx_req_reset,
-            rx_logic_reset => rx_req_reset,
-            rx_locked => rx_locked,
-            tx_locked => tx_locked,
-            --tx_bsc_rst_out => 
-            --rx_bsc_rst_out => 
-            --tx_bs_rst_out => 
-            --rx_bs_rst_out => 
-            --tx_rst_dly_out => 
-            --rx_rst_dly_out => 
-            --tx_bsc_en_vtc_out => 
-            --rx_bsc_en_vtc_out => 
-            --tx_bs_en_vtc_out => 
-            --rx_bs_en_vtc_out => 
-            --riu_clk_out => 
-            --riu_addr_out => 
-            --riu_wr_data_out => 
-            --riu_wr_en_out => 
-            --riu_nibble_sel_out => 
-            riu_rddata_3 => X"0000",
-            riu_valid_3 => '0',
-            riu_prsnt_3 => '0',
-            riu_rddata_2 => X"0000",
-            riu_valid_2 => '0',
-            riu_prsnt_2 => '0',
-            riu_rddata_1 => X"0000",
-            riu_valid_1 => '0',
-            riu_prsnt_1 => '0',
-            --rx_btval_3 => 
-            --rx_btval_2 => 
-            --rx_btval_1 => 
-            tx_dly_rdy_1 => '1',
-            rx_dly_rdy_1 => '1',
-            rx_vtc_rdy_1 => '1',
-            tx_vtc_rdy_1 => '1',
-            tx_dly_rdy_2 => '1',
-            rx_dly_rdy_2 => '1',
-            rx_vtc_rdy_2 => '1',
-            tx_vtc_rdy_2 => '1',
-            tx_dly_rdy_3 => '1',
-            rx_dly_rdy_3 => '1',
-            rx_vtc_rdy_3 => '1',
-            tx_vtc_rdy_3 => '1',
-            --tx_pll_clk_out => tx_pll_clk_out,
-            --rx_pll_clk_out => rx_pll_clk_out,
-            tx_rdclk_out => tx_rdclk_out,
-            reset => (not mdio_done) or reset_b3 -- otherwise we reset the PLLs and they will never lock!
-        );
-    end generate;
 
     locked_i <= tx_locked and rx_locked and mdio_done;
     locked <= locked_i;
@@ -515,8 +353,8 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
     mdio_mdc: entity work.vcu118_eth_mdio
         port map ( 
             sysclk125 => sysclk125,
-            rst_phy => rst_phy or reset_b4 or (auto_restart and dip_sw(3)),
-            soft_restart => reset_b1,
+            rst_phy => rst_phy,
+            soft_restart => reset_b4,
             done => mdio_done,
             poll_enable => mdio_poll_enable,
             poll_done => mdio_poll_done,
@@ -531,54 +369,20 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
     phy_on <= '1';
     phy_resetb <= not rst_phy;
 
-    latch_failure_config: process(clk125,rst125)
-        variable link_ok, link_fail : std_logic;
-    begin
-        if rst125 = '1' then
-            latch_link_ok   <= (others => '0');
-            latch_link_fail <= (others => '0');
-        end if;
-        if rising_edge(clk125) then
-            if mdio_done = '1' then
-                link_ok   := status_vector(1) and status_vector(1) and status_vector(7) and status_vector(3);
-                link_fail := status_vector(1) and (not status_vector(0)) and status_vector(2);
-                latch_link_ok(0) <= link_ok;
-                latch_link_fail(0) <= link_fail;
-                for I in 2 downto 1 loop
-                    if ethkhz_edge = '1' then 
-                        latch_link_ok(I) <= latch_link_ok(I-1); 
-                        latch_link_fail(I) <= latch_link_fail(I-1) and not link_ok;
-                    else
-                        latch_link_fail(I) <= latch_link_fail(I) and not link_ok;
-                    end if;
-                end loop;
-            end if;
-       end if;
-    end process;
-
-    auto_restart_trigger: process(sysclk125)
+    auto_reneg: process(sysclk125)
         begin
             if rising_edge(sysclk125) then
-                if auto_restart_q = '1' then
-                    if auto_restart_next = beat_sysclk125 then
-                        auto_restart <= '1';
-                        auto_restart_q <= '0';
-                    end if;
-                elsif (latch_link_ok(2) and latch_link_fail(2)) = '1' then
-                    if auto_restarts(3) = '0' then
-                        auto_restart_q <= '1';
-                        auto_restart_next <= not beat_sysclk125;
-                    end if;
-                end if;
-                if auto_restart = '1' then
-                    auto_restart_q <= '0';
-                    auto_restart_next <= '0';
-                    auto_restarts <= auto_restarts + 1;
+                mdio_done_d <= mdio_done;
+                if mdio_done_d = '0' and mdio_done = '1' then
+                    an_restart <= '1';    
+                    an_restart_d <= '1';    
+                else
+                    an_restart <= an_restart_d;
+                    an_restart_d <= '0';
                 end if;
             end if;
         end process;
-
-    -- synchronize reset buttons to clk125
+        
     capture_reset1: process(clk125,reset_b1)
         begin
             if reset_b1 = '1' then
@@ -604,18 +408,22 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
                     case dip_sw(1 downto 0) is
                         when "00" =>
                             for_leds(2) <= rst125;
-                            for_leds(3) <= auto_restart_q;
-                            for_leds(4) <= auto_restarts(0);
-                            for_leds(5) <= auto_restarts(1);
-                            for_leds(6) <= auto_restarts(2);
-                            for_leds(7) <= auto_restarts(3);
+                            for_leds(3) <= tx_locked and rx_locked;
+                            for_leds(4) <= an_restart;
+                            for_leds(5) <= an_done;
+                            for_leds(6) <= status_vector(0) and status_vector(1) and status_vector(7);
+                            for_leds(7) <= beat_tx_rd;
                         when "01" =>
                             for_leds(2) <= mdio_done;
-                            if req_isol = '1' then for_leds(3) <= '1'; end if;
-                            if rx_req_reset = '1' then for_leds(4) <= '1'; end if;
-                            if tx_req_reset = '1' then for_leds(5) <= '1'; end if;
-                            if rx_valid_i = '1' then for_leds(6) <= '1'; end if;
-                            if mdio_status_reg1(2) = '1' then for_leds(7) <= '1'; end if;
+                            for_leds(3) <= req_isol;
+                            for_leds(4) <= rx_req_reset;
+                            for_leds(5) <= tx_req_reset;
+                            if rx_valid_i = '1' then 
+                                for_leds(6) <= '1'; 
+                            elsif slowedge = '1' then
+                                for_leds(6) <= '0'; 
+                            end if;
+                            for_leds(7) <= status_vector(3);
                         when "10" =>
                             for_leds(2) <= status_vector(0);
                             for_leds(3) <= status_vector(1);
@@ -661,34 +469,6 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
                             for_leds(5) <= mdio_status_reg4(12);
                             for_leds(6) <= mdio_status_reg4(11);
                             for_leds(7) <= mdio_status_reg4(10);
-                      -- when "100" =>
-                      --     for_leds(2) <= '0';
-                      --     for_leds(3) <= '0';
-                      --     for_leds(4) <= '0';
-                      --     for_leds(5) <= '0';
-                      --     for_leds(6) <= '0';
-                      --     for_leds(7) <= '0';
-                      -- when "101" =>
-                      --     for_leds(2) <= mdio_status_reg5(5);
-                      --     for_leds(3) <= mdio_status_reg5(4);
-                      --     for_leds(4) <= mdio_status_reg5(3);
-                      --     for_leds(5) <= mdio_status_reg5(2);
-                      --     for_leds(6) <= mdio_status_reg5(1);
-                      --     for_leds(7) <= mdio_status_reg5(0);
-                      -- when "110" =>
-                      --     for_leds(2) <= mdio_status_reg5(10);
-                      --     for_leds(3) <= mdio_status_reg5(9);
-                      --     for_leds(4) <= mdio_status_reg5(8);
-                      --     for_leds(5) <= mdio_status_reg5(7);
-                      --     for_leds(6) <= mdio_status_reg5(6);
-                      --     for_leds(7) <= mdio_status_reg5(5);
-                      -- when "111" =>
-                      --     for_leds(2) <= mdio_status_reg5(15);
-                      --     for_leds(3) <= mdio_status_reg5(14);
-                      --     for_leds(4) <= mdio_status_reg5(13);
-                      --     for_leds(5) <= mdio_status_reg5(12);
-                      --     for_leds(6) <= mdio_status_reg5(11);
-                      --     for_leds(7) <= mdio_status_reg5(10);
                     end case;
                 end if;
             end if;
@@ -698,16 +478,14 @@ gen_sgmii_noan: if SGMII_CORE_AN = '0' generate
     heart_sysclk125: entity work.ipbus_clock_div
             port map( clk => sysclk125, d28 => beat_sysclk125 );
     heart_clk125: entity work.ipbus_clock_div
-            port map( clk => clk125, d17 => ethkhz, d28 => beat_clk125 );
-    make_khzedge: process(clk125)
+            port map( clk => clk125, d28 => beat_clk125 );
+    make_slowedge: process(sysclk125)
         begin
-            if rising_edge(clk125) then
-                ethkhz_del <= ethkhz;
+            if rising_edge(sysclk125) then 
+                beat_sysclk125_del <= beat_sysclk125;
             end if;
         end process;
-        ethkhz_edge <= '1' when (ethkhz = '1' and ethkhz_del /= '1') else '0';
-
-
+        slowedge <= '1' when (beat_sysclk125 = '1' and beat_sysclk125_del /= '1') else '0';
 
     heart_tx_rd: entity work.ipbus_clock_div
             port map( clk => tx_rdclk_out, d28 => beat_tx_rd );
