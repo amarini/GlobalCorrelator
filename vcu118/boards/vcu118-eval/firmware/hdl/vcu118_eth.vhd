@@ -231,8 +231,8 @@ begin
         port map(
             gtx_clk => clk125,
             glbl_rstn => rstn,
-            rx_axi_rstn => '1',
-            tx_axi_rstn => '1',
+            rx_axi_rstn => not rst125,
+            tx_axi_rstn => not rst125,
             rx_statistics_vector => rx_statistics_vector,
             rx_statistics_valid => rx_statistics_valid,
             rx_mac_aclk => open,
@@ -273,7 +273,7 @@ begin
             txn_0 => txn,
             rxp_0 => rxp,
             rxn_0 => rxn,
-            signal_detect_0 => mdio_status_reg1(2) or dip_sw(3), -- or not(mdio_poll_enable), --?
+            signal_detect_0 => mdio_clkdone, -- or not(mdio_poll_enable), --?
             an_adv_config_vector_0 => (0 => '1', 10=>'0', 11=>'1', 12=>'1', 14=>'1', 15=>'1', others=>'0'),
             --                          -- 0:SGMII: 10-11: 1000Mbps  12: Full Duplex  14: ACK  15: Link up 
             --                          -- probably useless as it does not reach the PHY
@@ -292,7 +292,7 @@ begin
             speed_is_10_100_0 => '0',
             speed_is_100_0 => '0',
             status_vector_0 => status_vector, --open, --useless, it doesn't come from the phy
-            configuration_vector_0 => (4 => '1', others => '0'),
+            configuration_vector_0 => (4 => '1', 3 => not(mdio_clkdone), others => '0'),
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
@@ -342,10 +342,10 @@ begin
             --tx_pll_clk_out => tx_pll_clk_out,
             --rx_pll_clk_out => rx_pll_clk_out,
             tx_rdclk_out => tx_rdclk_out,
-            reset => not (dip_sw(3) or mdio_done) -- otherwise we reset the PLLs and they will never lock!
+            reset => not (dip_sw(3) or mdio_clkdone) -- otherwise we reset the PLLs and they will never lock!
         );
 
-    locked_i <= tx_locked and rx_locked and mdio_done;
+    locked_i <= tx_locked and rx_locked;
     locked <= locked_i;
 
     mdio_poll_enable <= '1';
@@ -356,6 +356,7 @@ begin
             rst_phy => rst_phy,
             soft_restart => reset_b4,
             done => mdio_done,
+            clkdone => mdio_clkdone,
             poll_enable => mdio_poll_enable,
             poll_done => mdio_poll_done,
             status_reg1 => mdio_status_reg1,

@@ -12,6 +12,7 @@ entity vcu118_eth_mdio is
     rst_phy:   in std_logic; -- reset signal of the phy (sync to sysclk125)
     soft_restart: in std_logic; -- make a soft restart
     done:      out std_logic; -- phy was programmed successfully
+    clkdone:   out std_logic; -- phy was programmed successfully
     poll_enable : in std_logic;
     poll_done:   out std_logic; -- phy was polled successfully
     status_reg1: out std_logic_vector(15 downto 0); -- phy status reg 1
@@ -92,6 +93,7 @@ architecture Behavioral of vcu118_eth_mdio is
                                                       encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
                                                       encode_mdio_reg_write(    VCU118_PHYADD, "00000", x"1340") ; -- re-trigger AN
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
+    signal mdio_clkdone : std_logic := '0';
 
     constant MDIO_POLL_LENGTH : integer := 320;
     signal mdio_poll_data : std_logic_vector(0 to MDIO_POLL_LENGTH-1) := 
@@ -169,12 +171,16 @@ phy_prog: process(sysclk125)
                         mdio_o <= mdio_soft_restart(to_integer(mdio_soft_restart_addr(5 downto 0)));
                         mdio_soft_restart_addr <= mdio_soft_restart_addr + 1;
                         mdio_data_addr <= (others => '0');
+                        mdio_clkdone <= '0';
                         mdio_poll_last <= slowclk;
                     elsif mdio_data_addr(10) = '0' then
                         mdio_t <= '0'; -- write
                         mdio_o <= mdio_data(to_integer(mdio_data_addr(9 downto 0)));
                         mdio_data_addr <= mdio_data_addr + 1;
                         mdio_poll_last <= slowclk;
+                        if mdio_data_addr(8) = '1' then
+                            mdio_clkdone <= '0';
+                        end if;
                     else
                        if soft_rst_chain(0) = '1' then
                            mdio_soft_restart_addr <= (others => '0');
@@ -202,12 +208,14 @@ phy_prog: process(sysclk125)
                 else
                     mdio_data_addr <= (others => '0');
                     mdio_t <= '1'; -- read/dont-care
+                    mdio_clkdone <= '0';
                 end if;
             end if;
         end if;
     end process;
 
 done <= mdio_data_addr(10);
+clkdone <= mdio_clkdone;
 poll_done <= mdio_poll_done;
 
 phy_stat: process(sysclk125)
