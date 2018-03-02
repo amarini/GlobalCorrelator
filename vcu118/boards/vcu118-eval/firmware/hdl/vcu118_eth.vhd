@@ -214,12 +214,11 @@ architecture rtl of vcu118_eth is
     signal an_restart, an_restart_d, an_done : std_logic := '0';
     signal status_vector : std_logic_vector(15 downto 0);
     signal mdio_status_reg1, mdio_status_reg2, mdio_status_reg3, mdio_status_reg4, mdio_status_reg5 : std_logic_vector(15 downto 0);
-    signal mdio_done, mdio_done_d, mdio_poll_done, mdio_poll_enable : std_logic := '0';
+    signal mdio_done, mdio_done_d, mdio_clkdone, mdio_poll_done, mdio_poll_enable : std_logic := '0';
     signal beat_sysclk125, beat_sysclk125_del, slowedge, beat_clk125, beat_tx_pll, beat_tx_rd, beat_rx_pll: std_logic;
     signal rx_valid_i, rx_error_i : std_logic;
     signal for_leds : std_logic_vector(7 downto 2) := (others => '0');
     signal rst_b1_c125_m, rst_b1_c125, rst_b2_c125_m, rst_b2_c125, rst_b2_c125_d : std_logic := '0';
-    signal rx_req_reset, tx_req_reset, req_isol, tx_rdclk_out, tx_pll_clk_out, rx_pll_clk_out : std_logic := '0';
 
 begin
     ethclk125 <= clk125;
@@ -285,7 +284,7 @@ begin
             gmii_rxd_0 => gmii_rxd,
             gmii_rx_dv_0 => gmii_rx_dv,
             gmii_rx_er_0 => gmii_rx_er,
-            gmii_isolate_0 => req_isol,
+            gmii_isolate_0 => open,
             sgmii_clk_r_0 => open, --??
             sgmii_clk_f_0 => open, --??
             sgmii_clk_en_0 => open, --??
@@ -296,8 +295,8 @@ begin
             clk125_out => clk125,
             --clk312_out => clk312,
             rst_125_out => rst125, 
-            tx_logic_reset => tx_req_reset,
-            rx_logic_reset => rx_req_reset,
+            tx_logic_reset => open, --tx_req_reset,
+            rx_logic_reset => open, --rx_req_reset,
             rx_locked => rx_locked,
             tx_locked => tx_locked,
             --tx_bsc_rst_out => 
@@ -341,7 +340,7 @@ begin
             tx_vtc_rdy_3 => '1',
             --tx_pll_clk_out => tx_pll_clk_out,
             --rx_pll_clk_out => rx_pll_clk_out,
-            tx_rdclk_out => tx_rdclk_out,
+            --tx_rdclk_out => tx_rdclk_out,
             reset => not (dip_sw(3) or mdio_clkdone) -- otherwise we reset the PLLs and they will never lock!
         );
 
@@ -415,10 +414,10 @@ begin
                             for_leds(6) <= status_vector(0) and status_vector(1) and status_vector(7);
                             for_leds(7) <= beat_tx_rd;
                         when "01" =>
-                            for_leds(2) <= mdio_done;
-                            for_leds(3) <= req_isol;
-                            for_leds(4) <= rx_req_reset;
-                            for_leds(5) <= tx_req_reset;
+                            for_leds(2) <= mdio_clkdone;
+                            for_leds(3) <= '0';
+                            for_leds(4) <= '0';
+                            for_leds(5) <= '0';
                             if rx_valid_i = '1' then 
                                 for_leds(6) <= '1'; 
                             elsif slowedge = '1' then
@@ -487,11 +486,6 @@ begin
             end if;
         end process;
         slowedge <= '1' when (beat_sysclk125 = '1' and beat_sysclk125_del /= '1') else '0';
-
-    heart_tx_rd: entity work.ipbus_clock_div
-            port map( clk => tx_rdclk_out, d28 => beat_tx_rd );
-
-
 
 end rtl;
 
