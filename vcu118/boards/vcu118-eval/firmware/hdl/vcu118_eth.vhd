@@ -63,10 +63,6 @@ entity vcu118_eth is
         rst_clients: out std_logic; -- request reset of output
         locked: out std_logic; -- locked to ethernet clock
         debug_leds: out std_logic_vector(7 downto 0);
-        reset_b1: in std_logic; -- in case of worry, press this button
-        reset_b2: in std_logic; -- in case of uneasiness, press this button
-        reset_b3: in std_logic; -- ACME reset button 
-        reset_b4: in std_logic; -- ACME reset button 
         dip_sw : in std_logic_vector(3 downto 0);
         -- data in and out (connected to ipbus)
         tx_data: in std_logic_vector(7 downto 0);
@@ -204,10 +200,9 @@ architecture rtl of vcu118_eth is
     END COMPONENT;
 
     --- clocks
-    signal clk125: std_logic;
+    signal clk125, clk2mhz: std_logic;
     --- slow clocks and edges
-    signal slowclk, slowclk_del, slowedge: std_logic := '0'; -- slow generated clocks
-    signal sloweth: std_logic;
+    signal slowclk, slowclk_d, slowedge: std_logic := '0'; -- slow generated clocks
     --- resets
     signal rst_chain : std_logic_vector(4 downto 0) := (others => '1');
     signal sysrst: std_logic; -- in to logic
@@ -222,7 +217,6 @@ architecture rtl of vcu118_eth is
     signal gmii_tx_en, gmii_tx_er, gmii_rx_dv, gmii_rx_er: std_logic;
 
     -- mac stats
-    signal rx_valid_i, rx_error_i : std_logic;
     --signal rx_statistics_vector : std_logic_vector(27 downto 0);
     --signal rx_statistics_valid : std_logic;
 
@@ -239,18 +233,16 @@ begin
 phy_on <= '1';
 
 clkdiv: entity work.ipbus_clock_div
-    port map( clk => sysclk125, d28 => slowclk ); 
-
-ethdiv: entity work.ipbus_clock_div
-    port map( clk => clk125, d28 => sloweth ); 
+    port map( clk => sysclk125, d7 => clk2mhz, d28 => slowclk ); 
+    phy_mdc <= clk2mhz;
 
 make_slowedge: process(sysclk125)
     begin
         if rising_edge(sysclk125) then -- ff's with CE
-            slowclk_del <= slowclk;
+            slowclk_d <= slowclk;
         end if;
     end process;
-    slowedge <= '1' when (slowclk = '1' and slowclk_del /= '1') else '0';
+    slowedge <= '1' when (slowclk = '1' and slowclk_d /= '1') else '0';
 
 rst_req: process(sysclk125,rst) -- async-presettables ff's with CE
     begin
@@ -280,9 +272,9 @@ rst_req: process(sysclk125,rst) -- async-presettables ff's with CE
             rx_mac_aclk => open,
             rx_reset => rx_reset_out,
             rx_axis_mac_tdata => rx_data,
-            rx_axis_mac_tvalid => rx_valid_i, 
+            rx_axis_mac_tvalid => rx_valid, 
             rx_axis_mac_tlast => rx_last,
-            rx_axis_mac_tuser => rx_error_i,
+            rx_axis_mac_tuser => rx_error,
             tx_ifg_delay => X"00",
             tx_statistics_vector => open,
             tx_statistics_valid => open,
@@ -301,11 +293,9 @@ rst_req: process(sysclk125,rst) -- async-presettables ff's with CE
             gmii_rxd => gmii_rxd,
             gmii_rx_dv => gmii_rx_dv,
             gmii_rx_er => gmii_rx_er,
-            rx_configuration_vector => X"0000_0000_0000_0000_0B02",
-            tx_configuration_vector => X"0000_0000_0000_0000_0002"
+            rx_configuration_vector => X"0000_0000_0000_0000_0812",
+            tx_configuration_vector => X"0000_0000_0000_0000_0012"
         );
-    rx_valid <= rx_valid_i;
-    rx_error <= rx_error_i;
 
     sgmii: sgmii_adapter_lvds_0
         port map ( 
@@ -368,18 +358,19 @@ rst_req: process(sysclk125,rst) -- async-presettables ff's with CE
 mdio_mdc: entity work.vcu118_eth_mdio
     port map ( 
         sysclk125 => sysclk125,
+        mdc => clk2mhz,
         rst => sysrst,
         done => mdio_done,
         clkdone => mdio_clkdone,
         poll_enable => '1',
+        poll_clk => slowclk,
         poll_done => mdio_poll_done,
         status_reg1 => mdio_status_reg1,
         status_reg2 => mdio_status_reg2,
         status_reg3 => mdio_status_reg3,
         status_reg4 => mdio_status_reg4,
         status_reg5 => mdio_status_reg5,
-        phy_mdio => phy_mdio,
-        phy_mdc => phy_mdc);
+        phy_mdio => phy_mdio);
                 
 auto_reneg: process(sysclk125)
     begin
@@ -400,7 +391,7 @@ set_leds: process(sysclk125)
         if rising_edge(sysclk125) then
             case dip_sw(2 downto 0) is 
                when "000" =>
-                    debug_leds(0) <= sloweth;
+                    debug_leds(0) <= slowclk;
                     debug_leds(1) <= mdio_done;
                     debug_leds(2) <= rx_locked and rx_locked;
                     debug_leds(3) <= not (tx_reset_out or rx_reset_out);
@@ -420,7 +411,7 @@ set_leds: process(sysclk125)
                when "010" => debug_leds(7 downto 0) <= (others => '0');
                when "011" => debug_leds(7 downto 0) <= (others => '0');
                when "100" =>
-                    debug_leds(0) <= sloweth;
+                    debug_leds(0) <= slowclk;
                     debug_leds(1) <= mdio_poll_done;
                     debug_leds(2) <= mdio_status_reg1(5);
                     debug_leds(3) <= mdio_status_reg1(4);
@@ -429,7 +420,7 @@ set_leds: process(sysclk125)
                     debug_leds(6) <= mdio_status_reg1(1);
                     debug_leds(7) <= mdio_status_reg1(0);
                when "101" =>
-                    debug_leds(0) <= sloweth;
+                    debug_leds(0) <= slowclk;
                     debug_leds(1) <= mdio_poll_done;
                     debug_leds(2) <= mdio_status_reg2(13);
                     debug_leds(3) <= mdio_status_reg2(12);
@@ -438,7 +429,7 @@ set_leds: process(sysclk125)
                     debug_leds(6) <= mdio_status_reg2(1);
                     debug_leds(7) <= mdio_status_reg2(0);
                when "110" =>
-                    debug_leds(0) <= sloweth;
+                    debug_leds(0) <= slowclk;
                     debug_leds(1) <= mdio_poll_done;
                     debug_leds(2) <= mdio_status_reg3(14);
                     debug_leds(3) <= mdio_status_reg3(13);
@@ -447,7 +438,7 @@ set_leds: process(sysclk125)
                     debug_leds(6) <= mdio_status_reg3(9);
                     debug_leds(7) <= mdio_status_reg3(8);
                when "111" =>
-                    debug_leds(0) <= sloweth;
+                    debug_leds(0) <= slowclk;
                     debug_leds(1) <= mdio_poll_done;
                     debug_leds(2) <= mdio_status_reg4(15);
                     debug_leds(3) <= mdio_status_reg4(14);

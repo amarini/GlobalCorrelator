@@ -5,28 +5,27 @@ use ieee.numeric_std.all;
 library unisim;
 use unisim.vcomponents.all;
 
-
 entity vcu118_eth_mdio is
  port (
-    sysclk125: in std_logic; -- clock
+    sysclk125: in std_logic; -- system clock, 125 MHz
+    mdc:       in std_logic; -- Clock for MDIO communication; <= 2.5 MHz, sync with sysclk125
     rst:       in std_logic; -- reset signal (sync to sysclk125)
+    clkdone:   out std_logic; -- phy clock was enabled 
     done:      out std_logic; -- phy was programmed successfully
-    clkdone:   out std_logic; -- phy was programmed successfully
-    poll_enable : in std_logic;
+    poll_enable: in std_logic; -- set to 1 to periodically poll the phy mdio registers
+    poll_clk:    in std_logic; -- ~1Hz clock, for the periodic polling of the registers
     poll_done:   out std_logic; -- phy was polled successfully
     status_reg1: out std_logic_vector(15 downto 0); -- phy status reg 1
     status_reg2: out std_logic_vector(15 downto 0); -- phy status reg 2
     status_reg3: out std_logic_vector(15 downto 0); -- phy status reg 2
     status_reg4: out std_logic_vector(15 downto 0); -- phy status reg 2
     status_reg5: out std_logic_vector(15 downto 0); -- phy status reg 2
-    phy_mdio: inout std_logic; -- control line to program the PHY chip
-    phy_mdc : out std_logic    -- clock line (must be < 2.5 MHz)
+    phy_mdio: inout std_logic  -- control line to program the PHY chip
   );
 end vcu118_eth_mdio;
 
 architecture Behavioral of vcu118_eth_mdio is
-    signal clk2mhz, clk2mhz_del, clk2mhz_edge: std_logic := '0'; -- 2MHz generated clock for MDIO/MDC interface
-    signal slowclk, slowclk_del, slowedge: std_logic := '0';     -- very slow clock (~Hz), for waiting until device is ready 
+    signal mdc_del: std_logic := '0'; -- 2MHz generated clock for MDIO/MDC interface
     
     signal mdio_t : std_logic := '1'; --\
     signal mdio_i : std_logic := '0'; --+--- tri-state inputs for mdio
@@ -76,9 +75,6 @@ architecture Behavioral of vcu118_eth_mdio is
 
     -- predefined MDIO PHYADD for the VCU118 PHY, from UG1224 (vcu118 user manual)
     constant VCU118_PHYADD : std_logic_vector(4 downto 0) := b"00011";
-    -- enable SGMII 6-wire mode (i.e. send out 625 Mhz clock to FPGA)
-    -- see https://www.xilinx.com/support/answers/69494.html, and data sheet of TI DP83867, section 8.6.40 "SGMII Control Register 1"
-    -- also, disable RGMII mode (unclear if it's needed)
     -- we bit-reverse it in the definition, so that we can send LSB to MSB 
     -- try follow 8-13 of https://forums.xilinx.com/t5/Xilinx-Boards-and-Kits/VCU118-SGMII-Ethernet/td-p/801826
     signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000") & -- enable sgmii clk
@@ -109,48 +105,27 @@ architecture Behavioral of vcu118_eth_mdio is
 
 begin
 
-
-clkdiv: entity work.ipbus_clock_div
-    port map( clk => sysclk125, d7 => clk2mhz, d28 => slowclk ); 
-
-make_slowedge: process(sysclk125)
-    begin
-        if rising_edge(sysclk125) then 
-            slowclk_del <= slowclk;
-        end if;
-    end process;
-    slowedge <= '1' when (slowclk = '1' and slowclk_del /= '1') else '0';
-
-make_2mhzedge: process(sysclk125)
-    begin
-        if rising_edge(sysclk125) then
-            clk2mhz_del <= clk2mhz;
-        end if;
-    end process;
-    clk2mhz_edge <= '1' when (clk2mhz = '1' and clk2mhz_del /= '1') else '0';
-
 mdio_3st: IOBUF
     port map( T => mdio_t, I => mdio_o, O => mdio_i, IO => phy_mdio );
-
-phy_mdc <= clk2mhz;
 
 phy_prog: process(sysclk125)
     begin
         if rising_edge(sysclk125) then
-            if clk2mhz_edge = '1' then
+            mdc_del <= mdc;
+            if mdc = '1' and mdc_del = '0' then
                 if rst = '0' then
                     if mdio_data_addr(10) = '0' then
                         mdio_t <= '0'; -- write
                         mdio_o <= mdio_data(to_integer(mdio_data_addr(9 downto 0)));
                         mdio_data_addr <= mdio_data_addr + 1;
-                        mdio_poll_last <= slowclk;
+                        mdio_poll_last <= poll_clk;
                         if mdio_data_addr(8) = '1' then
                             mdio_clkdone <= '1';
                         end if;
                     else
-                       if mdio_poll_last /= slowclk then
+                       if mdio_poll_last /= poll_clk then
                            mdio_poll_addr <= (others => '0');
-                           mdio_poll_last <= slowclk;
+                           mdio_poll_last <= poll_clk;
                            mdio_poll_done <= '0';
                        elsif mdio_poll_done = '0' and poll_enable = '1' then
                            mdio_poll_addr <= mdio_poll_addr + 1;

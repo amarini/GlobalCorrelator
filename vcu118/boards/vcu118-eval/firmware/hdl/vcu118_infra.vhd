@@ -125,10 +125,6 @@ begin
             -- status
             locked => eth_locked,
             debug_leds(7 downto 0) => debug_leds(7 downto 0),
-            reset_b1 => reset_b1,
-            reset_b2 => reset_b2,
-            reset_b3 => reset_b3,
-            reset_b4 => reset_b4,
             dip_sw => dip_sw,
             -- eth clock out
             ethclk125 => ethclk125,
