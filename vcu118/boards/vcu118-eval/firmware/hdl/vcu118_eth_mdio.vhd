@@ -9,8 +9,7 @@ use unisim.vcomponents.all;
 entity vcu118_eth_mdio is
  port (
     sysclk125: in std_logic; -- clock
-    rst_phy:   in std_logic; -- reset signal of the phy (sync to sysclk125)
-    soft_restart: in std_logic; -- make a soft restart
+    rst:       in std_logic; -- reset signal (sync to sysclk125)
     done:      out std_logic; -- phy was programmed successfully
     clkdone:   out std_logic; -- phy was programmed successfully
     poll_enable : in std_logic;
@@ -29,9 +28,6 @@ architecture Behavioral of vcu118_eth_mdio is
     signal clk2mhz, clk2mhz_del, clk2mhz_edge: std_logic := '0'; -- 2MHz generated clock for MDIO/MDC interface
     signal slowclk, slowclk_del, slowedge: std_logic := '0';     -- very slow clock (~Hz), for waiting until device is ready 
     
-    signal rst_chain : std_logic_vector(4 downto 0) := (others => '1'); -- delay chain 
-    signal soft_rst_chain : std_logic_vector(4 downto 0) := (others => '0'); -- delay chain 
-
     signal mdio_t : std_logic := '1'; --\
     signal mdio_i : std_logic := '0'; --+--- tri-state inputs for mdio
     signal mdio_o : std_logic := '0'; --/
@@ -87,10 +83,10 @@ architecture Behavioral of vcu118_eth_mdio is
     -- try follow 8-13 of https://forums.xilinx.com/t5/Xilinx-Boards-and-Kits/VCU118-SGMII-Ethernet/td-p/801826
     signal mdio_data : std_logic_vector(0 to 1023) := encode_mdio_extreg_write( VCU118_PHYADD, x"00D3", x"4000") & -- enable sgmii clk
                                                       encode_mdio_extreg_write( VCU118_PHYADD, x"0032", x"0000") & -- disable rgmii
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10000", x"0800") & -- enable sgmii
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
+                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10000", x"F860") & -- enable sgmii
                                                       encode_mdio_extreg_write( VCU118_PHYADD, x"0031", x"0170") & -- set the SGMII auto-negotiation timer to 11 ms and perform the software workaround mentioned in AR #69494 because the TI PHY is not strapped to mode 3
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
-                                                      encode_mdio_reg_write(    VCU118_PHYADD, "10101", x"0000") & -- NOP 
                                                       encode_mdio_reg_write(    VCU118_PHYADD, "00000", x"1340") ; -- re-trigger AN
     signal mdio_data_addr : unsigned(10 downto 0) := (others => '0');
     signal mdio_clkdone : std_logic := '0';
@@ -111,9 +107,6 @@ architecture Behavioral of vcu118_eth_mdio is
     signal mdio_polled_data : std_logic_vector(0 to MDIO_POLL_LENGTH) := (others => '0');
     signal mdio_poll_last, mdio_poll_done : std_logic := '0';
 
-    --signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"4000") ;
-    signal mdio_soft_restart : std_logic_vector(0 to 63) := encode_mdio_reg_write( VCU118_PHYADD, b"11111", x"8000") ;
-    signal mdio_soft_restart_addr : unsigned(6 downto 0) := (others => '1'); 
 begin
 
 
@@ -136,26 +129,6 @@ make_2mhzedge: process(sysclk125)
     end process;
     clk2mhz_edge <= '1' when (clk2mhz = '1' and clk2mhz_del /= '1') else '0';
 
-long_wait: process(sysclk125,rst_phy)
-    begin
-        if rst_phy = '1' then
-            rst_chain <= (others => '1');
-        elsif rising_edge(sysclk125) then
-            if slowedge = '1' then
-               rst_chain(4 downto 0) <= '0' & rst_chain(4 downto 1);
-            end if;
-        end if;
-    end process;
-
-read_soft_restart: process(sysclk125,soft_restart)
-    begin
-        if soft_restart = '1' then
-            soft_rst_chain <= (others => '1');
-        elsif rising_edge(sysclk125) then
-            soft_rst_chain(4 downto 0) <= '0' & soft_rst_chain(4 downto 1);
-        end if;
-    end process;
-
 mdio_3st: IOBUF
     port map( T => mdio_t, I => mdio_o, O => mdio_i, IO => phy_mdio );
 
@@ -165,15 +138,8 @@ phy_prog: process(sysclk125)
     begin
         if rising_edge(sysclk125) then
             if clk2mhz_edge = '1' then
-                if rst_chain(0) = '0' then
-                    if mdio_soft_restart_addr(6) = '0' and soft_rst_chain(0) = '0' then
-                        mdio_t <= '0'; -- write
-                        mdio_o <= mdio_soft_restart(to_integer(mdio_soft_restart_addr(5 downto 0)));
-                        mdio_soft_restart_addr <= mdio_soft_restart_addr + 1;
-                        mdio_data_addr <= (others => '0');
-                        mdio_clkdone <= '0';
-                        mdio_poll_last <= slowclk;
-                    elsif mdio_data_addr(10) = '0' then
+                if rst = '0' then
+                    if mdio_data_addr(10) = '0' then
                         mdio_t <= '0'; -- write
                         mdio_o <= mdio_data(to_integer(mdio_data_addr(9 downto 0)));
                         mdio_data_addr <= mdio_data_addr + 1;
@@ -182,9 +148,6 @@ phy_prog: process(sysclk125)
                             mdio_clkdone <= '0';
                         end if;
                     else
-                       if soft_rst_chain(0) = '1' then
-                           mdio_soft_restart_addr <= (others => '0');
-                       end if;
                        if mdio_poll_last /= slowclk then
                            mdio_poll_addr <= (others => '0');
                            mdio_poll_last <= slowclk;
@@ -230,6 +193,5 @@ phy_stat: process(sysclk125)
             end loop;
         end if;
     end process;
-
 
 end Behavioral;

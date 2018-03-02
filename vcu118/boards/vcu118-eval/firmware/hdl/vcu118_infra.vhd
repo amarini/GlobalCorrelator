@@ -52,11 +52,9 @@ architecture rtl of vcu118_infra is
     -- for clocking part (the ones without the _i don't go out of this module)
     signal clk_i, clk40_i, clk_ipb_i, sysclk125, mmcm_locked: std_logic; 
     -- inputs from reset logic
-    signal rst_ipb_i, rst_ipb_ctrl, rst_eth, rst_phy, rst_eth_clients, status_ok_i: std_logic;
+    signal rst_ipb_i, rst_ipb_ctrl, rst_phy, status_ok_i: std_logic;
     -- inputs from ethernet
-    signal ethclk125, ethrst125, eth_locked: std_logic;
-    -- generated here
-    signal rst_ipbus_macpart: std_logic;
+    signal ethclk125, eth_locked, rst_eth: std_logic;
 
     -- ===== data lines ===== ---
     -- ipbus to ethernet
@@ -111,8 +109,6 @@ begin
             rst_ipb => rst_ipb_i,
             rst_ipb_ctrl => rst_ipb_ctrl,
             rst_phy => rst_phy,
-            rst_eth => rst_eth,
-            rst_eth_clients => rst_eth_clients,
             -- this is on when all resets are complete
             status_ok => status_ok_i);
     rst_ipb <= rst_ipb_i;
@@ -123,8 +119,9 @@ begin
     eth : entity work.vcu118_eth
         port map(
             -- reset in
-            rst => rst_eth,
-            rst_phy => rst_phy,
+            rst => rst_phy,
+            -- reset out
+            rst_clients => rst_eth,
             -- status
             locked => eth_locked,
             debug_leds(7 downto 0) => debug_leds(7 downto 0),
@@ -135,7 +132,6 @@ begin
             dip_sw => dip_sw,
             -- eth clock out
             ethclk125 => ethclk125,
-            ethrst125 => ethrst125,
             sysclk125 => sysclk125,
             -- mac ports (go to ipbus)
             tx_data => tx_data, rx_data => rx_data,
@@ -148,12 +144,10 @@ begin
             phy_on => phy_on, phy_resetb => phy_resetb, 
             phy_mdio => phy_mdio, phy_mdc => phy_mdc);
 
-    rst_ipbus_macpart <= ethrst125 or rst_eth_clients;
-
     ipbus: entity work.ipbus_ctrl
         port map(
             mac_clk => ethclk125,
-            rst_macclk => rst_ipbus_macpart,
+            rst_macclk => rst_eth,
             ipb_clk => clk_ipb_i,
             rst_ipb => rst_ipb_ctrl,
             mac_rx_data => rx_data,
