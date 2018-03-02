@@ -145,7 +145,7 @@ phy_prog: process(sysclk125)
                         mdio_data_addr <= mdio_data_addr + 1;
                         mdio_poll_last <= slowclk;
                         if mdio_data_addr(8) = '1' then
-                            mdio_clkdone <= '0';
+                            mdio_clkdone <= '1';
                         end if;
                     else
                        if mdio_poll_last /= slowclk then

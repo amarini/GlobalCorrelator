@@ -408,7 +408,15 @@ set_leds: process(sysclk125)
                     debug_leds(5) <= sgmii_status_vector(3);
                     debug_leds(6) <= sgmii_status_vector(10);
                     debug_leds(7) <= sgmii_status_vector(11);
-               when "001" => debug_leds(7 downto 0) <= (others => '0');
+               when "001" => 
+                    debug_leds(0) <= mdio_clkdone;
+                    debug_leds(1) <= mdio_done;
+                    debug_leds(2) <= rx_locked and rx_locked;
+                    debug_leds(3) <= rst125;
+                    debug_leds(4) <= not (tx_reset_out or rx_reset_out);
+                    debug_leds(5) <= sgmii_status_vector(0) and sgmii_status_vector(1) and sgmii_status_vector(7);
+                    debug_leds(6) <= sgmii_status_vector(3);
+                    debug_leds(7) <= an_restart;
                when "010" => debug_leds(7 downto 0) <= (others => '0');
                when "011" => debug_leds(7 downto 0) <= (others => '0');
                when "100" =>
