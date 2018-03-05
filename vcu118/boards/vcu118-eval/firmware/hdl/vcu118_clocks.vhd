@@ -29,9 +29,9 @@ end vcu118_clocks;
 architecture rtl of vcu118_clocks is
     signal sysclk_in, clk_u, clk40_u, clk30_u : std_logic;
     --signal clkslow_u, clkfast_u: std_logic;
-    signal sysclk125_u, sysclk125_i: std_logic;
+    signal sysclk125_in, sysclk125_u, sysclk125_i: std_logic;
     -- for MMCM
-    signal clk_fb : std_logic;
+    signal clk_fb, clk_fb125, mmcm_locked_i, mmcm125_locked_i : std_logic;
 begin
 
 input_sys : IBUFGDS
@@ -44,8 +44,7 @@ mmcm: MMCME4_BASE
       clkout1_divide => 5,
       --clkout2_divide => 10,
       --clkout3_divide => 3,
-      clkout4_divide => 30,
-      clkout5_divide => 40
+      clkout4_divide => 30
     )
     port map(
       clkin1 => sysclk_in,
@@ -55,12 +54,30 @@ mmcm: MMCME4_BASE
       --clkout2 => clkslow_u,
       --clkout3 => clkfast_u,
       clkout4 => clk40_u,
-      clkout5 => clk30_u,
       rst => mmcm_reset,
       pwrdwn => '0',
-      locked => mmcm_locked
+      locked => mmcm_locked_i
     );
 
+mmcm125: MMCME4_BASE
+    generic map(
+      clkin1_period => 8.0,
+      clkfbout_mult_f => 12.0,  -- Setting VCO to frequency 1200 ( within [800, 1600] MHz, as required in DS923 for Virtex Ultrascale+)
+      clkout1_divide => 12,
+      clkout2_divide => 48
+    )
+    port map(
+      clkin1 => sysclk125_in,
+      clkfbin => clk_fb125,
+      clkfbout => clk_fb125,
+      clkout1 => sysclk125_u,
+      clkout2 => clk30_u,
+      rst => mmcm_reset,
+      pwrdwn => '0',
+      locked => mmcm125_locked_i
+    );
+
+mmcm_locked <= mmcm_locked_i and mmcm125_locked_i;
 
 buf_clk : BUFG port map ( I => clk_u, O => clk);
 buf_clk40 : BUFG port map ( I => clk40_u, O => clk40);
@@ -68,7 +85,7 @@ buf_clk40 : BUFG port map ( I => clk40_u, O => clk40);
 --buf_clkfast : BUFG port map ( I => clkfast_u, O => clkfast);
 
 input_sys125 : IBUFGDS
-    port map ( I  => sysclk125_in_p, IB => sysclk125_in_n, O  => sysclk125_u);
+    port map ( I  => sysclk125_in_p, IB => sysclk125_in_n, O  => sysclk125_in);
 
 buf_sys125 : BUFG
     port map ( I => sysclk125_u, O => sysclk125_i);

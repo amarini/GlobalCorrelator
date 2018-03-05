@@ -184,6 +184,8 @@ begin
             if clk_ipb_i'event and clk_ipb_i = '1' then
                 stat_reg(0) <= ( 0 => mmcm_locked,
                                  1 => eth_locked,
+                                 2 => not ctrl_reg(0)(2),
+                                 3 => not ctrl_reg(0)(3),
                                 31 => status_ok_i,
                                 others => '0');
             end if;
