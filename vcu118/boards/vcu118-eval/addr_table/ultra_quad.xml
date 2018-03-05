@@ -1,7 +1,7 @@
 <node id="quad">
-    <node id="ctrl" address="0x00" description="control registers">
-        <node id="ctrl_reg" address="0x0" description="control read-enable and capture" fwinfo="endpoint;width=1" />
-        <node id="stat_reg" address="0x1" description="stat register (r/o copy of ctrl reg)" fwinfo="endpoint;width=1" />
+    <node id="ctrl" address="0x00" description="control registers" fwinfo="endpoint;width=1" >
+        <node id="ctrl_reg" address="0x0" description="control read-enable and capture" fwinfo="endpoint;width=0" />
+        <node id="stat_reg" address="0x1" description="stat register (r/o copy of ctrl reg)" fwinfo="endpoint;width=0" />
     </node>
     <node id="buffers" address="0x10" description="buffers">
         <node id="rx0" address="0x0" description="channel 0 receive or inject buffer" module="file://ultra_buffer.xml" />

@@ -1,4 +1,4 @@
 <node id="infra">
-    <node id="ctrl_reg" address="0x0" description="ctrl/stat register" fwinfo="endpoint;width=1" />
-    <node id="stat_reg" address="0x1" description="ctrl/stat register" fwinfo="endpoint;width=1" />
+    <node id="ctrl_reg" address="0x0" description="ctrl/stat register" fwinfo="endpoint;width=0" />
+    <node id="stat_reg" address="0x1" description="ctrl/stat register" fwinfo="endpoint;width=0" />
 </node>

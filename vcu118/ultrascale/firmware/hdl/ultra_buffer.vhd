@@ -7,6 +7,7 @@ use work.ultra_constants.all;
 
 use work.ipbus.all;
 use work.ipbus_reg_types.all;
+use work.ipbus_decode_ultra_quad.all;
 
 entity ultra_buffer is
    generic(
@@ -31,10 +32,8 @@ architecture behavioral of ultra_buffer is
     signal inj_buff, cap_buff: mybuff;
     signal inj_buff_d, cap_buff_d: mybuff;
     signal addr: std_logic_vector(ADDR_WIDTH-1 downto 0);
-    signal ipb_to_slaves:   ipb_wbus_array(1 downto 0);
-    signal ipb_from_slaves: ipb_rbus_array(1 downto 0);
-    signal ipb_to_buff:   ipb_wbus_array(7 downto 0);
-    signal ipb_from_buff: ipb_rbus_array(7 downto 0);
+    signal ipb_to_slaves:   ipb_wbus_array(N_SLAVES-1 downto 0);
+    signal ipb_from_slaves: ipb_rbus_array(N_SLAVES-1 downto 0);
     signal we, re : std_logic_vector(3 downto 0) := (others => '0');
     signal we_meta, re_meta : std_logic_vector(3 downto 0) := (others => '0'); -- for clock domain transition
     signal ctrl_reg, stat_reg: ipb_reg_v(0 downto 0);
@@ -55,11 +54,11 @@ begin
     gen_brams: for i in 3 downto 0 generate
         rx_bram : entity work.ipbus_ported_dpram36
             generic map (ADDR_WIDTH => ADDR_WIDTH)
-            port map (clk => clk_ipb, rst => rst_ipb, ipb_in => ipb_to_buff(2*i), ipb_out => ipb_from_buff(2*i),
+            port map (clk => clk_ipb, rst => rst_ipb, ipb_in => ipb_to_slaves(1+2*i), ipb_out => ipb_from_slaves(1+2*i),
                       rclk => clk, we => '0', addr => addr, d => (others => '0'), q => inj_buff(i));
         tx_bram : entity work.ipbus_ported_dpram36
             generic map (ADDR_WIDTH => ADDR_WIDTH)
-            port map (clk => clk_ipb, rst => rst_ipb, ipb_in => ipb_to_buff(2*i+1), ipb_out => ipb_from_buff(2*i+1),
+            port map (clk => clk_ipb, rst => rst_ipb, ipb_in => ipb_to_slaves(1+2*i+1), ipb_out => ipb_from_slaves(1+2*i+1),
                       rclk => clk, we => we(i), addr => addr, d => cap_buff_d(i), q => open);
     end generate;
 
@@ -97,20 +96,18 @@ begin
     end process;
 
 
-   ipb_fab: entity work.ipbus_fabric_simple
-       generic map(NSLV => 2, DECODE_BASE => 4, DECODE_BITS => 1) 
-       port map(ipb_in => ipb_in, ipb_out => ipb_out, ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
-
-   ipb_selbuf: entity work.ipbus_fabric_simple
-       generic map(NSLV => 8, DECODE_BASE => 1, DECODE_BITS => 3) 
-       port map(ipb_in => ipb_to_slaves(1), ipb_out => ipb_from_slaves(1), ipb_to_slaves => ipb_to_buff, ipb_from_slaves => ipb_from_buff);
+   ipb_fab: entity work.ipbus_fabric_sel
+      generic map(NSLV => N_SLAVES, SEL_WIDTH => IPBUS_SEL_WIDTH) 
+      port map(sel => ipbus_sel_ultra_quad(ipb_in.ipb_addr),
+            ipb_in => ipb_in, ipb_out => ipb_out, 
+            ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
 
    reg: entity work.ipbus_ctrlreg_v
          port map(
                  clk => clk_ipb,
                  reset => rst_ipb,
-                 ipbus_in => ipb_to_slaves(0),
-                 ipbus_out => ipb_from_slaves(0),
+                 ipbus_in => ipb_to_slaves(N_SLV_CTRL),
+                 ipbus_out => ipb_from_slaves(N_SLV_CTRL),
                  d => stat_reg,
                  q => ctrl_reg
              );

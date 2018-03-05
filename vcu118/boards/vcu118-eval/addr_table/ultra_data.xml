@@ -1,35 +1,35 @@
 <node id="data">
-    <node id="quad00" address="0x00000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad01" address="0x01000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad02" address="0x02000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad03" address="0x03000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad04" address="0x04000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad05" address="0x05000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad06" address="0x06000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad07" address="0x07000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad08" address="0x08000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad09" address="0x09000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0A" address="0x0A000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0B" address="0x0B000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0C" address="0x0C000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0D" address="0x0D000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0E" address="0x0E000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad0F" address="0x0F000" description="quad" module="file://ultra_quad.xml" />
+    <node id="quad00" address="0x00000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad01" address="0x01000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad02" address="0x02000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad03" address="0x03000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad04" address="0x04000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad05" address="0x05000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad06" address="0x06000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad07" address="0x07000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad08" address="0x08000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad09" address="0x09000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0A" address="0x0A000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0B" address="0x0B000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0C" address="0x0C000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0D" address="0x0D000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0E" address="0x0E000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad0F" address="0x0F000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
 
-    <node id="quad10" address="0x10000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad11" address="0x11000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad12" address="0x12000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad13" address="0x13000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad14" address="0x14000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad15" address="0x15000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad16" address="0x16000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad17" address="0x17000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad18" address="0x18000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad19" address="0x19000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1A" address="0x1A000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1B" address="0x1B000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1C" address="0x1C000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1D" address="0x1D000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1E" address="0x1E000" description="quad" module="file://ultra_quad.xml" />
-    <node id="quad1F" address="0x1F000" description="quad" module="file://ultra_quad.xml" />
+    <node id="quad10" address="0x10000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad11" address="0x11000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad12" address="0x12000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <!--<node id="quad13" address="0x13000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad14" address="0x14000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad15" address="0x15000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad16" address="0x16000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad17" address="0x17000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad18" address="0x18000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad19" address="0x19000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1A" address="0x1A000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1B" address="0x1B000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1C" address="0x1C000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1D" address="0x1D000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1E" address="0x1E000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />
+    <node id="quad1F" address="0x1F000" description="quad" module="file://ultra_quad.xml" fwinfo="endpoint" />-->
 </node>
