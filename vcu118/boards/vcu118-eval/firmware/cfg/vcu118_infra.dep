@@ -2,12 +2,18 @@ src --cd ../ucf eth.xdc
 
 include -c ipbus-firmware:components/ipbus_core ipbus_core.dep
 src -c ipbus-firmware:components/ipbus_core ipbus_package.vhd
-src -c ipbus-firmware:components/ipbus_core ipbus_fabric_simple.vhd
+src -c ipbus-firmware:components/ipbus_core ipbus_fabric_sel.vhd
+
 src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_types.vhd
 #src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_v.vhd
 src -c ipbus-firmware:components/ipbus_slaves ipbus_ctrlreg_v.vhd
 src -c ipbus-firmware:components/ipbus_util ipbus_clock_div.vhd
-src -c ipbus-firmware:components/ipbus_util led_stretcher.vhd
+#src -c ipbus-firmware:components/ipbus_util led_stretcher.vhd
+src ipbus_decode_ultra_buffer.vhd
+src ipbus_decode_ultra_data.vhd
+src ipbus_decode_ultra_quad.vhd
+src ipbus_decode_vcu118_infra.vhd
+src ipbus_decode_vcu118_top.vhd
 
 src vcu118_clocks.vhd
 src vcu118_resets.vhd

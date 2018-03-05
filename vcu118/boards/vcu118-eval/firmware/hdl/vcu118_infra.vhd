@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 
 use work.ipbus.all;
 use work.ipbus_reg_types.all;
+use work.ipbus_decode_vcu118_top.all;
 
 entity vcu118_infra is
     port(
@@ -70,8 +71,8 @@ architecture rtl of vcu118_infra is
     signal ipb_in_i: ipb_rbus; 
     signal ipb_out_i: ipb_wbus;
     -- split into system and rest
-    signal ipb_to_slaves: ipb_wbus_array(1 downto 0);
-    signal ipb_from_slaves: ipb_rbus_array(1 downto 0);
+    signal ipb_to_slaves: ipb_wbus_array(N_SLAVES-1 downto 0);
+    signal ipb_from_slaves: ipb_rbus_array(N_SLAVES-1 downto 0);
     signal ctrl_reg: ipb_reg_v(0 downto 0); 
     signal stat_reg: ipb_reg_v(0 downto 0);
 begin
@@ -163,19 +164,21 @@ begin
     ip_addr <= X"c0a8c811";
     clk_ipb <= clk_ipb_i;
 
-    ipb_split_sys_other: entity work.ipbus_fabric_simple
-       generic map(NSLV => 2, DECODE_BASE => 30, DECODE_BITS => 1)
-       port map(ipb_in => ipb_out_i, ipb_out => ipb_in_i, ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
+    ipb_split_sys_other: entity work.ipbus_fabric_sel
+       generic map(NSLV => N_SLAVES, SEL_WIDTH => IPBUS_SEL_WIDTH)
+       port map(sel => ipbus_sel_vcu118_top(ipb_out_i.ipb_addr),
+                ipb_in => ipb_out_i, ipb_out => ipb_in_i, 
+                ipb_to_slaves => ipb_to_slaves, ipb_from_slaves => ipb_from_slaves);
 
-    ipb_out  <= ipb_to_slaves(1);
-    ipb_from_slaves(1) <= ipb_in;
+    ipb_out  <= ipb_to_slaves(N_SLV_SYSTEM_DATA);
+    ipb_from_slaves(N_SLV_SYSTEM_DATA) <= ipb_in;
 
     reg: entity work.ipbus_ctrlreg_v
         port map(
                 clk => clk_ipb_i,
                 reset => rst_ipb_i,
-                ipbus_in => ipb_to_slaves(0),
-                ipbus_out => ipb_from_slaves(0),
+                ipbus_in => ipb_to_slaves(N_SLV_SYSTEM_INFRA),
+                ipbus_out => ipb_from_slaves(N_SLV_SYSTEM_INFRA),
                 d => stat_reg,
                 q => ctrl_reg
             );
