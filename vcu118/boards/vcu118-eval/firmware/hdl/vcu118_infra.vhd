@@ -113,8 +113,6 @@ begin
             status_ok => status_ok_i);
     rst_ipb <= rst_ipb_i;
     status_ok <= status_ok_i;
-    --debug_leds(1) <= mmcm_locked;
-    --debug_leds(3) <= eth_locked;
 
     eth : entity work.vcu118_eth
         port map(
@@ -161,7 +159,6 @@ begin
             ip_addr => ip_addr,
             pkt => pkt);
 
-    --mac_addr <= X"020ddba11511";
     mac_addr <= X"000A35037D07";
     ip_addr <= X"c0a8c811";
     clk_ipb <= clk_ipb_i;

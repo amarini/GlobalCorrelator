@@ -1,0 +1,16 @@
+<node id="quad">
+    <node id="ctrl" address="0x00" description="control registers">
+        <node id="ctrl_reg" address="0x0" description="control read-enable and capture" fwinfo="endpoint;width=1" />
+        <node id="stat_reg" address="0x1" description="stat register (r/o copy of ctrl reg)" fwinfo="endpoint;width=1" />
+    </node>
+    <node id="buffers" address="0x10" description="buffers">
+        <node id="rx0" address="0x0" description="channel 0 receive or inject buffer" module="file://ultra_buffer.xml" />
+        <node id="tx0" address="0x2" description="channel 0 transmit or capture buffer" module="file://ultra_buffer.xml" />
+        <node id="rx1" address="0x4" description="channel 1 receive or inject buffer" module="file://ultra_buffer.xml" />
+        <node id="tx1" address="0x6" description="channel 1 transmit or capture buffer" module="file://ultra_buffer.xml" />
+        <node id="rx2" address="0x8" description="channel 2 receive or inject buffer" module="file://ultra_buffer.xml" />
+        <node id="tx2" address="0xA" description="channel 2 transmit or capture buffer" module="file://ultra_buffer.xml" />
+        <node id="rx3" address="0xC" description="channel 3 receive or inject buffer" module="file://ultra_buffer.xml" />
+        <node id="tx3" address="0xE" description="channel 3 transmit or capture buffer" module="file://ultra_buffer.xml" />
+    </node>
+</node>

@@ -1,0 +1,4 @@
+<node id="buffer" fwinfo="endpoint;width=1">
+    <node id="addr" address="0x0"/>
+    <node id="data" address="0x1" size="0x800" mode="port"/>
+</node>
