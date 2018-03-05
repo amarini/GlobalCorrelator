@@ -21,7 +21,9 @@ entity ultra_buffer is
        ipb_in: in ipb_wbus;
        ipb_out: out ipb_rbus;
        tx_in : in ndata(3 downto 0);
-       rx_out: out ndata(3 downto 0)
+       rx_out: out ndata(3 downto 0);
+       is_playback : out std_logic;
+       is_capture : out std_logic
    );
 end ultra_buffer;
 
@@ -50,6 +52,9 @@ begin
         end if;
     end process;
 
+
+    is_playback <= re(0) and re(1) and re(2) and re(3);
+    is_capture  <= we(0) and we(1) and we(2) and we(3);
 
     gen_brams: for i in 3 downto 0 generate
         rx_bram : entity work.ipbus_ported_dpram36

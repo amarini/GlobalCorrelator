@@ -18,7 +18,7 @@ entity data_top is
     rst_ipb: in std_logic;
     ipb_in: in ipb_wbus;
     ipb_out: out ipb_rbus;
-    leds : out std_logic_vector(0 downto 0)
+    leds : out std_logic_vector(2 downto 0)
   );
 end data_top;
 
@@ -27,6 +27,7 @@ architecture Behavioral of data_top is
      signal data_from_algo : ndata(4*N_QUADS-1 downto 0);
      signal ipb_to_slaves:   ipb_wbus_array(N_SLAVES-1 downto 0);
      signal ipb_from_slaves: ipb_rbus_array(N_SLAVES-1 downto 0);
+     signal playback, capture: std_logic_vector(N_QUADS-1 downto 0);
 begin
 
 blink: entity work.dummy_blinker
@@ -34,8 +35,20 @@ blink: entity work.dummy_blinker
         clk => clk,
         rst => rst,
         l1 => leds(0)
-        --l2 => leds(1)
    );
+
+gen_leds: process(clk)
+    variable cap, play : std_logic_vector := '1';
+begin
+    if rising_edge(clk) then
+        for I in N_QUADS-1 downto 0 loop
+            play := play & playback(I);
+            cap := cap & capture(I);
+        end loop;
+        leds(1) <= play;
+        leds(2) <= cap;
+    end if;
+end process;
 
 gen_buffers: for Q in N_QUADS-1 downto 0 generate
     buffs : entity work.ultra_buffer
@@ -43,6 +56,8 @@ gen_buffers: for Q in N_QUADS-1 downto 0 generate
                  clk_ipb => clk_ipb, rst_ipb => rst_ipb,
                  ipb_in => ipb_to_slaves(Q), 
                  ipb_out => ipb_from_slaves(Q),
+                 is_playback => playback(Q), 
+                 is_capture => capture(Q), 
                  rx_out => data_to_algo(4*(Q+1)-1 downto 4*Q), 
                  tx_in => data_from_algo(4*(Q+1)-1 downto 4*Q));
 end generate gen_buffers;

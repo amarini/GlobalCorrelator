@@ -41,7 +41,8 @@ architecture Behavioral of top is
     signal clk_ipb, rst_ipb: std_logic;
     signal ipb_out: ipb_wbus;
     signal ipb_in: ipb_rbus;
-    signal noleds : std_logic_vector(0 downto 0);
+    signal dleds : std_logic_vector(2 downto 0);
+    signal ileds : std_logic_vector(7 downto 0);
 begin
 
   
@@ -54,7 +55,7 @@ data : entity work.data_top
         rst_ipb => rst_ipb, 
         ipb_in => ipb_out, 
         ipb_out => ipb_in, 
-        leds => noleds(0 downto 0));
+        leds => dleds);
 
 infra : entity work.vcu118_infra
   port map( 
@@ -75,7 +76,7 @@ infra : entity work.vcu118_infra
         dip_sw => dip_sw,
         -- ok
         status_ok => open, --leds(1),
-        debug_leds => leds(7 downto 0),
+        debug_leds => ileds(7 downto 0),
         -- ipbus
         clk_ipb => clk_ipb, rst_ipb => rst_ipb, 
         ipb_in => ipb_in, ipb_out => ipb_out,
@@ -86,6 +87,7 @@ infra : entity work.vcu118_infra
         phy_on => phy_on, phy_resetb => phy_resetb, 
         phy_mdio => phy_mdio, phy_mdc => phy_mdc);
 
-   
+leds(2 downto 0) <= dleds;
+leds(7 downto 3) <= ileds(7 downto 3);
 
 end Behavioral;
