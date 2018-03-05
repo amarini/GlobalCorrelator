@@ -36,7 +36,6 @@ blink: entity work.dummy_blinker
         --l2 => leds(1)
    );
 
-ipb_out <= IPB_RBUS_NULL;
 gen_buffers: for Q in N_QUADS-1 downto 0 generate
     buffs : entity work.ultra_buffer
         port map(clk => clk, rst => rst, 
