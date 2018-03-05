@@ -38,12 +38,12 @@ blink: entity work.dummy_blinker
    );
 
 gen_leds: process(clk)
-    variable cap, play : std_logic_vector := '1';
+    variable cap, play : std_logic := '1';
 begin
     if rising_edge(clk) then
         for I in N_QUADS-1 downto 0 loop
-            play := play & playback(I);
-            cap := cap & capture(I);
+            play := play and playback(I);
+            cap := cap and capture(I);
         end loop;
         leds(1) <= play;
         leds(2) <= cap;
