@@ -32,7 +32,6 @@ architecture behavioral of ultra_buffer is
     --attribute dont_touch of behavioral : architecture is "yes";
     type mybuff is array (3 downto 0) of std_logic_vector(35 downto 0);
     signal inj_buff, cap_buff: mybuff;
-    signal inj_buff_d, cap_buff_d: mybuff;
     signal addr: std_logic_vector(ADDR_WIDTH-1 downto 0);
     signal ipb_to_slaves:   ipb_wbus_array(N_SLAVES-1 downto 0);
     signal ipb_from_slaves: ipb_rbus_array(N_SLAVES-1 downto 0);
@@ -64,7 +63,7 @@ begin
         tx_bram : entity work.ipbus_ported_dpram36
             generic map (ADDR_WIDTH => ADDR_WIDTH)
             port map (clk => clk_ipb, rst => rst_ipb, ipb_in => ipb_to_slaves(1+2*i+1), ipb_out => ipb_from_slaves(1+2*i+1),
-                      rclk => clk, we => we(i), addr => addr, d => cap_buff_d(i), q => open);
+                      rclk => clk, we => we(i), addr => addr, d => cap_buff(i), q => open);
     end generate;
 
     count: process(clk,rst)
@@ -87,11 +86,9 @@ begin
                 cap_buff(i)(31 downto  0) <= tx_in(i).data;
                 cap_buff(i)(     32     ) <= tx_in(i).valid;
                 cap_buff(i)(35 downto 33) <= (others => '0');
-                cap_buff_d(i) <= cap_buff(i);
-                inj_buff_d(i) <= inj_buff(i);
                 if re(i) = '1' then
-                    rx_out(i).data  <= inj_buff_d(i)(31 downto 0);
-                    rx_out(i).valid <= inj_buff_d(i)(32);
+                    rx_out(i).data  <= inj_buff(i)(31 downto 0);
+                    rx_out(i).valid <= inj_buff(i)(32);
                 else
                     rx_out(i).data  <= (others => '0');
                     rx_out(i).valid <= '0';
