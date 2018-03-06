@@ -1,0 +1,14 @@
+src -c ipbus-firmware:components/ipbus_core ipbus_fabric_simple.vhd
+src -c ipbus-firmware:components/ipbus_slaves ipbus_ported_dpram36.vhd
+
+src ultra_quad.vhd
+src ultra_constants.vhd
+src ultra_data_types.vhd
+src data_top.vhd
+
+addrtab -t data_top.xml
+addrtab -t ultra_quad.xml
+addrtab ultra_buffer.xml
+
+src ipbus_decode_ultra_quad.vhd
+src ipbus_decode_data_top.vhd

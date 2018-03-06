@@ -1,19 +1,18 @@
-src --cd ../ucf eth.xdc
-
 include -c ipbus-firmware:components/ipbus_core ipbus_core.dep
 src -c ipbus-firmware:components/ipbus_core ipbus_package.vhd
 src -c ipbus-firmware:components/ipbus_core ipbus_fabric_sel.vhd
 
 src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_types.vhd
-#src -c ipbus-firmware:components/ipbus_slaves ipbus_reg_v.vhd
 src -c ipbus-firmware:components/ipbus_slaves ipbus_ctrlreg_v.vhd
 src -c ipbus-firmware:components/ipbus_util ipbus_clock_div.vhd
-#src -c ipbus-firmware:components/ipbus_util led_stretcher.vhd
-src ipbus_decode_ultra_buffer.vhd
-src ipbus_decode_ultra_data.vhd
-src ipbus_decode_ultra_quad.vhd
-src ipbus_decode_vcu118_infra.vhd
+
+# this below is used to split between infrastructure and rest
+addrtab -t vcu118_top.xml
 src ipbus_decode_vcu118_top.vhd
+
+# this below is not really used yet
+addrtab -t vcu118_infra.xml
+# src ipbus_decode_vcu118_infra.vhd
 
 src vcu118_clocks.vhd
 src vcu118_resets.vhd
@@ -23,9 +22,9 @@ src vcu118_eth.vhd
 
 src -c ipbus-firmware:components/ipbus_eth ../cgn/temac_gbe_v9_0.xci
 src ../cgn/sgmii_adapter_lvds_0.xci
-#src ../cgn/sgmii_adapter_lvds_0_noan.xci
 
-src --cd ../ucf clocks.tcl
 src --cd ../ucf pins.xdc
+src --cd ../ucf eth.xdc
+src --cd ../ucf clocks.tcl
 src --cd ../ucf pblocks.tcl
 

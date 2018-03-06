@@ -11,11 +11,11 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
 
-package ipbus_decode_ultra_data is
+package ipbus_decode_data_top is
 
   constant IPBUS_SEL_WIDTH: positive := 5; -- Should be enough for now?
   subtype ipbus_sel_t is std_logic_vector(IPBUS_SEL_WIDTH - 1 downto 0);
-  function ipbus_sel_ultra_data(addr : in std_logic_vector(31 downto 0)) return ipbus_sel_t;
+  function ipbus_sel_data_top(addr : in std_logic_vector(31 downto 0)) return ipbus_sel_t;
 
 -- START automatically  generated VHDL the Mon Mar  5 16:18:48 2018 
   constant N_SLV_QUAD00: integer := 0;
@@ -41,11 +41,11 @@ package ipbus_decode_ultra_data is
 -- END automatically generated VHDL
 
     
-end ipbus_decode_ultra_data;
+end ipbus_decode_data_top;
 
-package body ipbus_decode_ultra_data is
+package body ipbus_decode_data_top is
 
-  function ipbus_sel_ultra_data(addr : in std_logic_vector(31 downto 0)) return ipbus_sel_t is
+  function ipbus_sel_data_top(addr : in std_logic_vector(31 downto 0)) return ipbus_sel_t is
     variable sel: ipbus_sel_t;
   begin
 
@@ -96,7 +96,7 @@ package body ipbus_decode_ultra_data is
 
     return sel;
 
-  end function ipbus_sel_ultra_data;
+  end function ipbus_sel_data_top;
 
-end ipbus_decode_ultra_data;
+end ipbus_decode_data_top;
 

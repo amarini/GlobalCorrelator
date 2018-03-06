@@ -10,14 +10,14 @@ entity ultra_null_algo is
     port (
        clk : in std_logic;
        rst : in std_logic;
-       d   : in ndata(4*N_QUADS-1 downto 0);
-       q   : out ndata(4*N_QUADS-1 downto 0)
+       d   : in ldata(4*N_QUADS-1 downto 0);
+       q   : out ldata(4*N_QUADS-1 downto 0)
     );
 end ultra_null_algo;
 
 architecture behavioral of ultra_null_algo is
-    signal buff_in : ndata(4*N_QUADS-1 downto 0);
-    signal buff_out : ndata(4*N_QUADS-1 downto 0);
+    signal buff_in : ldata(4*N_QUADS-1 downto 0);
+    signal buff_out : ldata(4*N_QUADS-1 downto 0);
 
 begin
     buffers: process(clk)

@@ -9,7 +9,7 @@ use work.ipbus.all;
 use work.ipbus_reg_types.all;
 use work.ipbus_decode_ultra_quad.all;
 
-entity ultra_buffer is
+entity ultra_quad is
    generic(
        ADDR_WIDTH : natural := 10
    );
@@ -20,16 +20,14 @@ entity ultra_buffer is
        rst_ipb: in std_logic;
        ipb_in: in ipb_wbus;
        ipb_out: out ipb_rbus;
-       tx_in : in ndata(3 downto 0);
-       rx_out: out ndata(3 downto 0);
+       tx_in : in ldata(3 downto 0);
+       rx_out: out ldata(3 downto 0);
        is_playback : out std_logic;
        is_capture : out std_logic
    );
-end ultra_buffer;
+end ultra_quad;
 
-architecture behavioral of ultra_buffer is
-    --attribute dont_touch : string;
-    --attribute dont_touch of behavioral : architecture is "yes";
+architecture behavioral of ultra_quad is
     type mybuff is array (3 downto 0) of std_logic_vector(35 downto 0);
     signal inj_buff, cap_buff: mybuff;
     signal addr: std_logic_vector(ADDR_WIDTH-1 downto 0);
@@ -85,13 +83,19 @@ begin
             for i in 3 downto 0 loop
                 cap_buff(i)(31 downto  0) <= tx_in(i).data;
                 cap_buff(i)(     32     ) <= tx_in(i).valid;
-                cap_buff(i)(35 downto 33) <= (others => '0');
+                cap_buff(i)(     33     ) <= tx_in(i).start;
+                cap_buff(i)(     34     ) <= tx_in(i).strobe;
+                cap_buff(i)(35 downto 35) <= (others => '0');
                 if re(i) = '1' then
                     rx_out(i).data  <= inj_buff(i)(31 downto 0);
                     rx_out(i).valid <= inj_buff(i)(32);
+                    rx_out(i).start <= inj_buff(i)(33);
+                    rx_out(i).strobe <= inj_buff(i)(34);
                 else
                     rx_out(i).data  <= (others => '0');
                     rx_out(i).valid <= '0';
+                    rx_out(i).start <= '0';
+                    rx_out(i).strobe <= '0';
                 end if;
             end loop;
         end if;

@@ -10,10 +10,4 @@ src --cd ../ucf base.xdc
 
 include vcu118_infra.dep
 
-addrtab -t ultra_buffer.xml
-addrtab -t ultra_data.xml
-addrtab -t ultra_quad.xml
-addrtab -t vcu118_infra.xml
-addrtab -t vcu118_top.xml
-
 src vcu118_top.vhd
