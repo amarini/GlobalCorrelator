@@ -107,10 +107,13 @@ architecture rtl of emp_payload is
         type output_buff_t is array(N_BUFF downto 0) of ldata(N_OUT-1 downto 0);
         signal copy_in   : ldata(4 * N_REGION - 1 downto N_OUT);
         signal copy_out  : ldata(4 * N_REGION - 1 downto N_OUT);
-        signal buff_in   : ldata;
+        signal buff_in   : std_logic_vector(63 downto 0);
         signal buff_vld  : std_logic := '0';
         signal buff_out  : output_buff_t;
         signal out_vld   : std_logic := '0';
+
+        attribute SHREG_EXTRACT: string;
+        attribute SHREG_EXTRACT of buff_out: signal is "no"; -- Don't absorb FFs into shreg
 
 begin
 
@@ -125,8 +128,8 @@ begin
                 ap_idle => open,
                 ap_ready => open,
                 newRecord => buff_vld,
-                newValue_pt_V => buff_in.data(15 downto 0),
-                newValue_suff_V => buff_vld.data(63 downto 16),
+                newValue_pt_V => buff_in(15 downto 0),
+                newValue_stuff_V => buff_in(63 downto 16),
                 tap_0_pt_V => buff_out(0)(0).data(15 downto 0),
                 tap_0_stuff_V => buff_out(0)(0).data(63 downto 16),
                 tap_1_pt_V => buff_out(0)(1).data(15 downto 0),
@@ -176,25 +179,24 @@ begin
                 tap_23_pt_V => buff_out(0)(23).data(15 downto 0),
                 tap_23_stuff_V => buff_out(0)(23).data(63 downto 16),
                 tap_24_pt_V => buff_out(0)(24).data(15 downto 0),
-                tap_24_stuff_V => buff_out(0)(24).data(63 downto 16),
+                tap_24_stuff_V => buff_out(0)(24).data(63 downto 16)
             );
-
-            for j in N_OUT-1 downto 0 generate
-                buff_out(0)(j).valid <= out_vld;
-            end generate;
 
         executor: process(clk_p)
             begin
                 if rising_edge(clk_p) then
                     for j in N_OUT-1 downto 0 loop
                         q(j) <= buff_out(N_BUFF)(j);
-                        for i in N_BUFF downto 1 loop
+                        for i in N_BUFF downto 2 loop
                             buff_out(i)(j) <= buff_out(i-1)(j);
                         end loop;
+                        buff_out(1)(j).data   <= buff_out(0)(j).data;
+                        buff_out(1)(j).valid  <= out_vld;
+                        buff_out(1)(j).strobe <= '1';
                     end loop;
                         
                     buff_vld <= d(0).valid and d(1).valid and d(0).data(0);
-                    buff_in  <= d(1);
+                    buff_in  <= d(1).data;
                 end if;
             end process executor;
 
