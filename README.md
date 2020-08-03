@@ -22,3 +22,8 @@ Internally, it uses 6 BRAM36, to have the bandwith to store 3 x 64 bits input da
 A module that streams in objects serially, sorts them by pT on input, and outputs in parallel the top N candidates. 
 
 Objects are 64-bit, with a 16-bit pT, and the shift register is implemented using fabric resources, FFs and LUTs, in order to have a parallel output.
+
+### `dummy-hls-algo-240MHz`: example interfacing the 360 MHz links with a 240 MHz HLS IP core
+
+Independent clock FIFOs used to ferry the data across the clock domain crossing, implemented with FIFO36E2 primitives (instantiated in VHDL).
+The IP core runs at II=1 taking in 3 64-bit words plus a 1-bit signal marking the start of a new event (every 6 BX)
