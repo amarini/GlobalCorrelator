@@ -4,11 +4,12 @@ class rolling_ram_fifo {
     public:    
         rolling_ram_fifo() ;
         void update(
-                bool roll,        /*in*/
-                const Track & din,     /*in*/
-                Track       & dout,    /*out*/
-                bool        & valid,
-                bool        wasread  /*in*/
+                bool roll,        
+                const Track & din,
+                Track & dout,   
+                bool & valid,
+                bool wasread,    
+                bool &roll_out
         );
     private:
         typedef ap_uint<6> ptr_t;
@@ -28,7 +29,7 @@ rolling_ram_fifo::rolling_ram_fifo() {
 
 void rolling_ram_fifo::update(bool roll,     
                                  const Track & din, 
-                                 Track & dout, bool & valid, bool wasread) 
+                                 Track & dout, bool & valid, bool wasread, bool &roll_out) 
 {
     #pragma HLS inline
     // implement read port
@@ -42,6 +43,7 @@ void rolling_ram_fifo::update(bool roll,
         data[wr_ptr] = din;
         wr_ptr++;
     }
+    roll_out = roll_delayed;
     roll_delayed = roll;
 }
 
@@ -84,7 +86,7 @@ void pick_and_read(
     else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
 }
 
-void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS])
+void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {
     #pragma HLS pipeline II=1 enable_flush
     #pragma HLS array_partition variable=tracks_in  complete dim=0
@@ -98,6 +100,7 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
     #pragma HLS array_partition variable=valid_out complete dim=0
     #pragma HLS array_partition variable=was_read  complete dim=0
 
+#if NSECTORS == 9
     route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[8][4]);
     route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[8][5]);
     route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
@@ -116,6 +119,16 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
     route_link2fifo(tracks_in[7][1], fifo_in[7][1], fifo_in[8][3], fifo_in[6][5]);
     route_link2fifo(tracks_in[8][0], fifo_in[8][0], fifo_in[0][2], fifo_in[7][4]);
     route_link2fifo(tracks_in[8][1], fifo_in[8][1], fifo_in[0][3], fifo_in[7][5]);
+#elif NSECTORS == 3
+    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[2][4]);
+    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[2][5]);
+    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
+    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_in[2][3], fifo_in[0][5]);
+    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_in[0][2], fifo_in[1][4]);
+    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_in[0][3], fifo_in[1][5]);
+#else
+    #error "Unsupported number of sectors"
+#endif
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
@@ -128,12 +141,15 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
 
     static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
     #pragma HLS array_partition variable=fifos complete dim=1
+    static bool roll_out[NSECTORS][NFIFOS];
+    #pragma HLS array_partition variable=roll_out complete dim=0
 
+    newevent_out = roll_out[0][0];
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
         for (int j = 0; j < NFIFOS; ++j) {
             #pragma HLS unroll
-            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j]);
+            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j], roll_out[i][j]);
         }
     }
 }

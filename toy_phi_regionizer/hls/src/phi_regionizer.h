@@ -15,13 +15,13 @@ inline void clear(Track & t) {
     t.eta = 0; t.phi = 0; t.rest = 0; 
 }
 
-#define NSECTORS 9
+#define NSECTORS 3 // 9
 #define NFIBERS  2
 #define NREGIONS NSECTORS
 #define NFIFOS   6
 #define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
 
-void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS]);
+void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
 
 
 #endif

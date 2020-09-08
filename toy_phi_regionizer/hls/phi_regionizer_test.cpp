@@ -103,11 +103,12 @@ int main(int argc, char **argv) {
     FILE *fout = fopen("output.txt", "w");
     
 
-    int frame = 0; //int latency = 3; int pingpong = 0;
+    int frame = 0; int pingpong = 1; int latency = 2;
 
+    bool ok = true;
     for (int itest = 0; itest < NTEST; ++itest) {
         std::vector<Track> inputs[NSECTORS][NFIBERS];
-        //std::vector<Track> output[NREGIONS][2], output_ref[NREGIONS];
+        Track output[NREGIONS][TLEN], output_ref[NREGIONS][2*TLEN];
         for (int s = 0; s < NSECTORS; ++s) {
             for (int f = 0; f < NFIBERS; ++f) {
                 int ntracks = abs(rand())%7 + 3;
@@ -132,38 +133,64 @@ int main(int argc, char **argv) {
                 }
             }
             fprintf(fin, "\n");
-            fprintf(stdout, " | ");
 
             Track links_out[NREGIONS], links_ref[NREGIONS];
-            router_monolythic(i == 0, links_in, links_out);
+            bool  newev_out, newev_ref = (i == 0);
+            router_monolythic(i == 0, links_in, links_out, newev_out);
             router_ref(i == 0, links_in, links_ref);
 
-            fprintf(fout, "%5d    ", frame);
-            fprintf(fref, "%5d    ", frame);
+            fprintf(fout, "%5d %1d   ", frame, int(newev_out));
+            fprintf(fref, "%5d %1d   ", frame, int(newev_ref));
             for (int r = 0; r < NREGIONS; ++r) printTrack(fout, links_out[r]);
             for (int r = 0; r < NREGIONS; ++r) printTrack(fref, links_ref[r]);
             fprintf(fout, "\n");
             fprintf(fref, "\n");
 
+            fprintf(stdout, " | %1d  ", int(newev_ref));
             for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_ref[r]);
-            fprintf(stdout, " | ");
+            fprintf(stdout, " | %1d  ", int(newev_out));
             for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_out[r]);
             fprintf(stdout, "\n"); fflush(stdout);
-#if 0
-            for (int r = 0; r < NREGIONS; ++r) {
-                if (frame >= latency) {
-                    output[r].push_back(links_out[r]);
+
+            // begin validation
+            if (newev_ref) { 
+                pingpong = 1-pingpong;
+                for (int r = 0; r < NREGIONS; ++r) for (int k = 0; k < TLEN; ++k) clear(output_ref[r][TLEN*pingpong+k]);
+            }
+            for (int r = 0; r < NREGIONS; ++r) { 
+                output_ref[r][TLEN*pingpong+i] = links_ref[r];
+            }
+            if (newev_out) {
+                if (i != latency) { printf("ERROR in latency\n"); ok = false; break; }
+                if (itest > 0) { 
+                    for (int r = 0; r < NREGIONS; ++r) {
+                        for (int k = 0; k < TLEN; ++k) {
+                            if (!(output[r][k] == output_ref[r][TLEN*(1-pingpong)+k]))   {
+                                printf("ERROR in region %d, object %d: expected ", r, k);
+                                printTrack(stdout, output_ref[r][TLEN*(1-pingpong)+k]);
+                                printf("   found "); 
+                                printTrack(stdout, output[r][k]);
+                                printf("\n");
+                                ok = false; break; 
+                            }
+                        }
+                    }
+                    if (!ok) break; 
                 }
-                output_ref[r][pingpong].push_back(links_ref[r]);
+                for (int r = 0; r < NREGIONS; ++r) for (int k = 0; k < TLEN; ++k) clear(output[r][k]);
             }
-            if (i == latency) {
+            if (frame >= latency) {
+                for (int r = 0; r < NREGIONS; ++r) output[r][(frame-latency) % TLEN] = links_out[r];
             }
-#endif
-
+            // end validation
+            
+            if (!ok) break;
         }
-
+        if (!ok) break;
     } 
     fclose(fin);
     fclose(fref);
     fclose(fout);
+
+    return ok ? 0 : 1;
 }
