@@ -23,37 +23,42 @@ Track randTrack(int payload = -1, float prob=1) {
     return ret;
 }
 
-bool operator==(const Track & one, const Track & other) { 
-    if (one.pt == 0) return (other.pt == 0);
-    return one.pt == other.pt && one.eta == other.eta && one.phi == other.phi && one.rest == other.rest;
-}
-void printTrack(FILE *f, const Track & t) { 
-    fprintf(f,"%3d %+4d %+4d %4d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int());
-}
-void printTrackShort(FILE *f, const Track & t) { 
-    int shortphi = 0;
-    if      (t.phi > 300) shortphi = +4;
-    else if (t.phi > 200) shortphi = +3;
-    else if (t.phi > 100) shortphi = +2;
-    else if (t.phi >   0) shortphi = +1;
-    else if (t.phi <-300) shortphi = -4;
-    else if (t.phi <-200) shortphi = -3;
-    else if (t.phi <-100) shortphi = -2;
-    else if (t.phi <   0) shortphi = -1;
-    fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
-    //fprintf(f,"%3d %02d  ", t.pt.to_int(), t.rest.to_int());
-}
 
 struct RegionBuffer { 
     std::list<Track> fifos[NFIFOS]; 
+#ifdef FIFO_READ_TREE
+    Track staging_area[NFIFOS/2];
+#endif
     void flush() { 
         for (int j = 0; j < NFIFOS; ++j) fifos[j].clear(); 
+#ifdef FIFO_READ_TREE
+        for (int j = 0; j < NFIFOS/2; ++j) clear(staging_area[j]);
+#endif
     }
     void push(int f, const Track & tk, int phi_shift=0) {
         fifos[f].push_front(shiftedTrack(tk, phi_shift));
     }
     Track pop_next() {
         Track ret; clear(ret);
+#ifdef FIFO_READ_TREE
+        for (int j = 0; j < NFIFOS/2; ++j) {
+            if (staging_area[j].pt != 0) continue;
+            if (!fifos[2*j].empty()) {
+                staging_area[j] = fifos[2*j].back();
+                fifos[2*j].pop_back(); 
+            } else if (!fifos[2*j+1].empty()) {
+                staging_area[j] = fifos[2*j+1].back();
+                fifos[2*j+1].pop_back(); 
+            }
+        }
+        for (int j = 0; j < NFIFOS/2; ++j) {
+            if (staging_area[j].pt != 0) {
+                ret = staging_area[j];
+                clear(staging_area[j]);
+                break;
+            }
+        }
+#else
         for (int j = 0; j < NFIFOS; ++j) {
             if (!fifos[j].empty()) {
                 ret = fifos[j].back(); 
@@ -61,6 +66,7 @@ struct RegionBuffer {
                 break;
             }
         }
+#endif
         return ret;
     }
 };
@@ -103,7 +109,12 @@ int main(int argc, char **argv) {
     FILE *fout = fopen("output.txt", "w");
     
 
-    int frame = 0; int pingpong = 1; int latency = 2;
+    int frame = 0; int pingpong = 1; 
+#ifdef FIFO_READ_TREE
+    const int latency = 3;
+#else
+    const int latency = 2;
+#endif
 
     bool ok = true;
     for (int itest = 0; itest < NTEST; ++itest) {

@@ -11,9 +11,10 @@ set_part {xcvu9p-flga2104-2L-e}
 create_clock -period 2.5
 
 set_directive_dependence -class array -dependent false router_monolythic
+set_directive_dependence -class pointer -dependent false router_monolythic
 
 csim_design
-#csynth_design
+csynth_design
 #cosim_design -trace_level all
 #export_design -format ip_catalog -vendor "cern-cms" -version ${hlsIPVersion} -description ${hlsTopFunc}
 exit

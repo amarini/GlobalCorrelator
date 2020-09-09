@@ -54,6 +54,44 @@ void route_link2fifo(const Track & in, Track & center, Track & after, Track & be
     if (in.phi < 0) { before = in; before.phi += PHI_SHIFT; } else { clear(before); }
 }
 
+void reduce_2(
+        bool  read,
+        const Track & fifo1, 
+        const Track & fifo2, 
+        bool valid1,
+        bool valid2,
+        Track & out, 
+        bool  & valid,
+        bool  & wasread1,
+        bool  & wasread2) 
+{
+        if (read) {
+            if      (valid1) { out = fifo1; valid = 1; wasread1 = 1; wasread2 = 0; }
+            else if (valid2) { out = fifo2; valid = 1; wasread1 = 0; wasread2 = 1; }
+            else             { clear(out);  valid = 0; wasread1 = 0; wasread2 = 0; }
+        } else {
+            // don't touch out & valid, but switch off wasreads (we're stalled)
+            wasread1 = 0; wasread2 = 0;
+        }
+}
+void reduce_3(
+        const Track & wait1, 
+        const Track & wait2, 
+        const Track & wait3, 
+        bool valid1,
+        bool valid2,
+        bool valid3,
+        Track & out, 
+        bool  & wasread1,
+        bool  & wasread2,
+        bool  & wasread3) 
+{
+        if      (valid1) { out = wait1; wasread1 = 1; wasread2 = 0; wasread3 = 0; }
+        else if (valid2) { out = wait2; wasread1 = 0; wasread2 = 1; wasread3 = 0; }
+        else if (valid3) { out = wait3; wasread1 = 0; wasread2 = 0; wasread3 = 1; }
+        else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; }
+}
+
 void pick_and_read(
         const Track & fifo1, 
         const Track & fifo2, 
@@ -86,6 +124,8 @@ void pick_and_read(
     else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
 }
 
+#define FIFO_READ_TREE
+
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {
     #pragma HLS pipeline II=1 enable_flush
@@ -99,6 +139,21 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
     #pragma HLS array_partition variable=fifo_out complete dim=0
     #pragma HLS array_partition variable=valid_out complete dim=0
     #pragma HLS array_partition variable=was_read  complete dim=0
+#ifdef FIFO_READ_TREE
+    static Track tmp_out[NSECTORS][NFIFOS/2];
+    static bool valid_tmp[NSECTORS][NFIFOS/2], was_read_tmp[NSECTORS][NFIFOS/2];
+    static bool newevent_out_del = false;
+    #pragma HLS array_partition variable=tmp_out complete dim=0
+    #pragma HLS array_partition variable=valid_tmp complete dim=0
+    #pragma HLS array_partition variable=was_read_tmp  complete dim=0
+#endif
+
+    static bool roll_out[NSECTORS][NFIFOS];
+    #pragma HLS array_partition variable=roll_out complete dim=0
+
+    static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
+    #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
+
 
 #if NSECTORS == 9
     route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[8][4]);
@@ -132,19 +187,59 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
+#ifdef FIFO_READ_TREE
+        reduce_3(tmp_out[i][0],   tmp_out[i][1],   tmp_out[i][2],
+                 valid_tmp[i][0], valid_tmp[i][1], valid_tmp[i][2],
+                 tracks_out[i],
+                 was_read_tmp[i][0], was_read_tmp[i][1], was_read_tmp[i][2]);
+#ifndef __SYNTHESIS__
+        /*if (i == 1) {
+            fprintf(stderr,"\nsector %d 3-queue: valid %1d %1d %1d  tracks ", i, int(valid_tmp[i][0]), int(valid_tmp[i][1]), int(valid_tmp[i][2])); 
+            printTrackShort(stderr,tmp_out[i][0]); printTrackShort(stderr,tmp_out[i][1]); printTrackShort(stderr,tmp_out[i][2]);
+            fprintf(stderr,"  --> track "); 
+            printTrackShort(stderr,tracks_out[i]);
+            fprintf(stderr,"  read %1d %1d %1d\n", int(was_read_tmp[i][0]), int(was_read_tmp[i][1]), int(was_read_tmp[i][2])); 
+            
+        }*/
+#endif
+
+        for (int j = 0; j < NFIFOS/2; j++) {
+            bool read = roll_out[i][j*2] || was_read_tmp[i][j] || !valid_tmp[i][j];
+            reduce_2(read,
+                     fifo_out[i][j*2], fifo_out[i][j*2+1], 
+                     valid_out[i][j*2], valid_out[i][j*2+1],
+                     tmp_out[i][j],
+                     valid_tmp[i][j],
+                     was_read[i][j*2], was_read[i][j*2+1]);
+
+#ifndef __SYNTHESIS__
+            /*if (i == 1) {
+                fprintf(stderr,"sector %d 2-queue %d: read %1d valid %1d %1d  tracks ", i, j, int(read), int(valid_out[i][2*j]), int(valid_out[i][2*j+1])); 
+                printTrackShort(stderr,fifo_out[i][2*j]);
+                printTrackShort(stderr,fifo_out[i][2*j+1]);
+                fprintf(stderr,"  --> valid %1d track ", int(valid_tmp[i][j])); 
+                printTrackShort(stderr,tmp_out[i][j]);
+                fprintf(stderr,"  read %1d %1d\n", int(was_read[i][j*2]), int(was_read[i][j*2+1])); 
+                
+            }*/
+#endif
+        }
+#else
         pick_and_read(fifo_out[i][0],  fifo_out[i][1],  fifo_out[i][2],  fifo_out[i][3],  fifo_out[i][4],  fifo_out[i][5],
                       valid_out[i][0], valid_out[i][1], valid_out[i][2], valid_out[i][3], valid_out[i][4], valid_out[i][5],
                       tracks_out[i],
                       was_read[i][0], was_read[i][1], was_read[i][2], was_read[i][3], was_read[i][4], was_read[i][5]);
+#endif
+
     }
 
-
-    static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
-    #pragma HLS array_partition variable=fifos complete dim=1
-    static bool roll_out[NSECTORS][NFIFOS];
-    #pragma HLS array_partition variable=roll_out complete dim=0
-
+#ifdef FIFO_READ_TREE
+    newevent_out = newevent_out_del;
+    newevent_out_del = roll_out[0][0];
+#else
     newevent_out = roll_out[0][0];
+#endif
+
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
         for (int j = 0; j < NFIFOS; ++j) {

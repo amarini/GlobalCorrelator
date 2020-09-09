@@ -14,6 +14,12 @@ inline void clear(Track & t) {
     t.pt = 0; 
     t.eta = 0; t.phi = 0; t.rest = 0; 
 }
+inline bool operator==(const Track & one, const Track & other) { 
+    if (one.pt == 0) return (other.pt == 0);
+    return one.pt == other.pt && one.eta == other.eta && one.phi == other.phi && one.rest == other.rest;
+}
+
+
 
 #define NSECTORS 3 // 9
 #define NFIBERS  2
@@ -21,8 +27,30 @@ inline void clear(Track & t) {
 #define NFIFOS   6
 #define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
 
+#define FIFO_READ_TREE // algorithm that those the 6->1 FIFO reduction with a tree
+
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
 
+#ifndef __SYNTHESIS__
+#include <cstdio>
+
+inline void printTrack(FILE *f, const Track & t) { 
+    fprintf(f,"%3d %+4d %+4d %4d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int());
+}
+inline void printTrackShort(FILE *f, const Track & t) { 
+    int shortphi = 0;
+    if      (t.phi > 300) shortphi = +4;
+    else if (t.phi > 200) shortphi = +3;
+    else if (t.phi > 100) shortphi = +2;
+    else if (t.phi >   0) shortphi = +1;
+    else if (t.phi <-300) shortphi = -4;
+    else if (t.phi <-200) shortphi = -3;
+    else if (t.phi <-100) shortphi = -2;
+    else if (t.phi <   0) shortphi = -1;
+    fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
+    //fprintf(f,"%3d %02d  ", t.pt.to_int(), t.rest.to_int());
+}
+#endif
 
 #endif
 
