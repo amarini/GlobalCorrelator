@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
         Track output[NREGIONS][TLEN], output_ref[NREGIONS][2*TLEN];
         for (int s = 0; s < NSECTORS; ++s) {
             for (int f = 0; f < NFIBERS; ++f) {
-                int ntracks = abs(rand())%7 + 3;
+                int ntracks = abs(rand())%7 + 3 + itest/3;
                 for (int i = 0; i < ntracks; ++i) {
                     inputs[s][f].push_back(randTrack(10*(s+1)+f+1));
                 }

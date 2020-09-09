@@ -6,7 +6,7 @@
 struct Track {
     ap_uint<14> pt;
     ap_int<12>  eta, phi;
-    ap_uint<24> rest;
+    ap_uint<26> rest;
 };
 
 
@@ -18,6 +18,19 @@ inline bool operator==(const Track & one, const Track & other) {
     if (one.pt == 0) return (other.pt == 0);
     return one.pt == other.pt && one.eta == other.eta && one.phi == other.phi && one.rest == other.rest;
 }
+inline ap_uint<64> packTrack(const Track & t) { 
+    ap_uint<64> ret = (t.pt, t.eta, t.phi, t.rest );
+    return ret;
+}
+inline Track unpackTrack(const ap_uint<64> & word) { 
+    Track ret; 
+    ret.pt   = word(63,50);
+    ret.eta  = word(49,38);
+    ret.phi  = word(37,26);
+    ret.rest = word(25, 0);
+    return ret;
+}
+
 
 
 

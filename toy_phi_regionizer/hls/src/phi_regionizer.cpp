@@ -16,7 +16,7 @@ class rolling_ram_fifo {
         bool roll_delayed;
         ptr_t wr_ptr;  // where we will write the next data (i.e. one past the last written data)
         ptr_t rd_ptr;  // where we have read the data
-        Track data[64];
+        ap_uint<64> data[64];
 };
 
 
@@ -31,16 +31,17 @@ void rolling_ram_fifo::update(bool roll,
                                  const Track & din, 
                                  Track & dout, bool & valid, bool wasread, bool &roll_out) 
 {
+    #pragma HLS DEPENDENCE variable=data inter false
     #pragma HLS inline
     // implement read port
     rd_ptr = (roll_delayed ? ptr_t(0) : (wasread ? ptr_t(rd_ptr+1) : rd_ptr));
-    dout = data[rd_ptr];
+    dout = unpackTrack(data[rd_ptr]);
     valid = rd_ptr < wr_ptr;
 
     // implement write port
     if (roll) wr_ptr = 0;
     if (din.pt != 0) {
-        data[wr_ptr] = din;
+        data[wr_ptr] = packTrack(din);
         wr_ptr++;
     }
     roll_out = roll_delayed;
@@ -65,14 +66,15 @@ void reduce_2(
         bool  & wasread1,
         bool  & wasread2) 
 {
-        if (read) {
-            if      (valid1) { out = fifo1; valid = 1; wasread1 = 1; wasread2 = 0; }
-            else if (valid2) { out = fifo2; valid = 1; wasread1 = 0; wasread2 = 1; }
-            else             { clear(out);  valid = 0; wasread1 = 0; wasread2 = 0; }
-        } else {
-            // don't touch out & valid, but switch off wasreads (we're stalled)
-            wasread1 = 0; wasread2 = 0;
-        }
+    #pragma HLS inline
+    if (read) {
+        if      (valid1) { out = fifo1; valid = 1; wasread1 = 1; wasread2 = 0; }
+        else if (valid2) { out = fifo2; valid = 1; wasread1 = 0; wasread2 = 1; }
+        else             { clear(out);  valid = 0; wasread1 = 0; wasread2 = 0; }
+    } else {
+        // don't touch out & valid, but switch off wasreads (we're stalled)
+        wasread1 = 0; wasread2 = 0;
+    }
 }
 void reduce_3(
         const Track & wait1, 
@@ -86,10 +88,11 @@ void reduce_3(
         bool  & wasread2,
         bool  & wasread3) 
 {
-        if      (valid1) { out = wait1; wasread1 = 1; wasread2 = 0; wasread3 = 0; }
-        else if (valid2) { out = wait2; wasread1 = 0; wasread2 = 1; wasread3 = 0; }
-        else if (valid3) { out = wait3; wasread1 = 0; wasread2 = 0; wasread3 = 1; }
-        else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; }
+    #pragma HLS inline
+    if      (valid1) { out = wait1; wasread1 = 1; wasread2 = 0; wasread3 = 0; }
+    else if (valid2) { out = wait2; wasread1 = 0; wasread2 = 1; wasread3 = 0; }
+    else if (valid3) { out = wait3; wasread1 = 0; wasread2 = 0; wasread3 = 1; }
+    else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; }
 }
 
 void pick_and_read(
