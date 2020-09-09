@@ -19,10 +19,12 @@ inline bool operator==(const Track & one, const Track & other) {
     return one.pt == other.pt && one.eta == other.eta && one.phi == other.phi && one.rest == other.rest;
 }
 inline ap_uint<64> packTrack(const Track & t) { 
+    #pragma HLS inline
     ap_uint<64> ret = (t.pt, t.eta, t.phi, t.rest );
     return ret;
 }
 inline Track unpackTrack(const ap_uint<64> & word) { 
+    #pragma HLS inline
     Track ret; 
     ret.pt   = word(63,50);
     ret.eta  = word(49,38);
@@ -48,7 +50,7 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
 #include <cstdio>
 
 inline void printTrack(FILE *f, const Track & t) { 
-    fprintf(f,"%3d %+4d %+4d %4d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int());
+    fprintf(f,"%3d % 4d % 4d %4d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int()); // note no leading +'s or 0's, they confuse VHDL text parser
 }
 inline void printTrackShort(FILE *f, const Track & t) { 
     int shortphi = 0;

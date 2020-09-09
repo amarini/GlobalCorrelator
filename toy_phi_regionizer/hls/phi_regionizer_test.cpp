@@ -26,21 +26,17 @@ Track randTrack(int payload = -1, float prob=1) {
 
 struct RegionBuffer { 
     std::list<Track> fifos[NFIFOS]; 
-#ifdef FIFO_READ_TREE
     Track staging_area[NFIFOS/2];
-#endif
     void flush() { 
         for (int j = 0; j < NFIFOS; ++j) fifos[j].clear(); 
-#ifdef FIFO_READ_TREE
         for (int j = 0; j < NFIFOS/2; ++j) clear(staging_area[j]);
-#endif
     }
     void push(int f, const Track & tk, int phi_shift=0) {
         fifos[f].push_front(shiftedTrack(tk, phi_shift));
     }
     Track pop_next() {
         Track ret; clear(ret);
-#ifdef FIFO_READ_TREE
+        // shift data from each pair of fifos to the staging area
         for (int j = 0; j < NFIFOS/2; ++j) {
             if (staging_area[j].pt != 0) continue;
             if (!fifos[2*j].empty()) {
@@ -51,6 +47,7 @@ struct RegionBuffer {
                 fifos[2*j+1].pop_back(); 
             }
         }
+        // then from staging area to output
         for (int j = 0; j < NFIFOS/2; ++j) {
             if (staging_area[j].pt != 0) {
                 ret = staging_area[j];
@@ -58,15 +55,6 @@ struct RegionBuffer {
                 break;
             }
         }
-#else
-        for (int j = 0; j < NFIFOS; ++j) {
-            if (!fifos[j].empty()) {
-                ret = fifos[j].back(); 
-                fifos[j].pop_back(); 
-                break;
-            }
-        }
-#endif
         return ret;
     }
 };
@@ -110,11 +98,7 @@ int main(int argc, char **argv) {
     
 
     int frame = 0; int pingpong = 1; 
-#ifdef FIFO_READ_TREE
     const int latency = 3;
-#else
-    const int latency = 2;
-#endif
 
     bool ok = true;
     for (int itest = 0; itest < NTEST; ++itest) {
@@ -123,8 +107,9 @@ int main(int argc, char **argv) {
         for (int s = 0; s < NSECTORS; ++s) {
             for (int f = 0; f < NFIBERS; ++f) {
                 int ntracks = abs(rand())%7 + 3 + itest/3;
+                if (itest == 0) ntracks = (s == 0 && f == 0 ? TLEN : 0);
                 for (int i = 0; i < ntracks; ++i) {
-                    inputs[s][f].push_back(randTrack(10*(s+1)+f+1));
+                    inputs[s][f].push_back(randTrack(itest == 0 ? i+1 : 10*(s+1)+f+1));
                 }
             }
         }

@@ -14,7 +14,7 @@ class rolling_ram_fifo {
     private:
         typedef ap_uint<6> ptr_t;
         bool roll_delayed;
-        ptr_t wr_ptr;  // where we will write the next data (i.e. one past the last written data)
+        ptr_t wr_ptr;  // where we have last read the data
         ptr_t rd_ptr;  // where we have read the data
         ap_uint<64> data[64];
 };
@@ -34,9 +34,11 @@ void rolling_ram_fifo::update(bool roll,
     #pragma HLS DEPENDENCE variable=data inter false
     #pragma HLS inline
     // implement read port
-    rd_ptr = (roll_delayed ? ptr_t(0) : (wasread ? ptr_t(rd_ptr+1) : rd_ptr));
+    valid  = (roll_delayed ? (wr_ptr == 1) :                              // better to code it here than after updating rd_ptr
+                 wasread   ? ((rd_ptr+1) < wr_ptr) : (rd_ptr < wr_ptr));  // otherwise HLS serializes the two and doesn't meet timing
+    rd_ptr = (roll_delayed ? ptr_t(0) : 
+                 wasread   ? ptr_t(rd_ptr+1) : rd_ptr);
     dout = unpackTrack(data[rd_ptr]);
-    valid = rd_ptr < wr_ptr;
 
     // implement write port
     if (roll) wr_ptr = 0;
@@ -76,6 +78,7 @@ void reduce_2(
         wasread1 = 0; wasread2 = 0;
     }
 }
+
 void reduce_3(
         const Track & wait1, 
         const Track & wait2, 
@@ -95,40 +98,6 @@ void reduce_3(
     else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; }
 }
 
-void pick_and_read(
-        const Track & fifo1, 
-        const Track & fifo2, 
-        const Track & fifo3, 
-        const Track & fifo4, 
-        const Track & fifo5, 
-        const Track & fifo6, 
-        bool valid1,
-        bool valid2,
-        bool valid3,
-        bool valid4,
-        bool valid5,
-        bool valid6,
-        Track & out, 
-        bool & wasread1, 
-        bool & wasread2, 
-        bool & wasread3, 
-        bool & wasread4, 
-        bool & wasread5, 
-        bool & wasread6) 
-{
-    #pragma HSL inline
-    // no round-robin version for the moment
-    if      (valid1) { out = fifo1; wasread1 = 1; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
-    else if (valid2) { out = fifo2; wasread1 = 0; wasread2 = 1; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
-    else if (valid3) { out = fifo3; wasread1 = 0; wasread2 = 0; wasread3 = 1; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
-    else if (valid4) { out = fifo4; wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 1; wasread5 = 0; wasread6 = 0; }
-    else if (valid5) { out = fifo5; wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 1; wasread6 = 0; }
-    else if (valid6) { out = fifo6; wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 1; }
-    else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; wasread4 = 0; wasread5 = 0; wasread6 = 0; }
-}
-
-#define FIFO_READ_TREE
-
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {
     #pragma HLS pipeline II=1 enable_flush
@@ -142,14 +111,13 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
     #pragma HLS array_partition variable=fifo_out complete dim=0
     #pragma HLS array_partition variable=valid_out complete dim=0
     #pragma HLS array_partition variable=was_read  complete dim=0
-#ifdef FIFO_READ_TREE
+
     static Track tmp_out[NSECTORS][NFIFOS/2];
     static bool valid_tmp[NSECTORS][NFIFOS/2], was_read_tmp[NSECTORS][NFIFOS/2];
     static bool newevent_out_del = false;
     #pragma HLS array_partition variable=tmp_out complete dim=0
     #pragma HLS array_partition variable=valid_tmp complete dim=0
     #pragma HLS array_partition variable=was_read_tmp  complete dim=0
-#endif
 
     static bool roll_out[NSECTORS][NFIFOS];
     #pragma HLS array_partition variable=roll_out complete dim=0
@@ -190,7 +158,7 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
-#ifdef FIFO_READ_TREE
+
         reduce_3(tmp_out[i][0],   tmp_out[i][1],   tmp_out[i][2],
                  valid_tmp[i][0], valid_tmp[i][1], valid_tmp[i][2],
                  tracks_out[i],
@@ -227,21 +195,11 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
             }*/
 #endif
         }
-#else
-        pick_and_read(fifo_out[i][0],  fifo_out[i][1],  fifo_out[i][2],  fifo_out[i][3],  fifo_out[i][4],  fifo_out[i][5],
-                      valid_out[i][0], valid_out[i][1], valid_out[i][2], valid_out[i][3], valid_out[i][4], valid_out[i][5],
-                      tracks_out[i],
-                      was_read[i][0], was_read[i][1], was_read[i][2], was_read[i][3], was_read[i][4], was_read[i][5]);
-#endif
 
     }
 
-#ifdef FIFO_READ_TREE
     newevent_out = newevent_out_del;
     newevent_out_del = roll_out[0][0];
-#else
-    newevent_out = roll_out[0][0];
-#endif
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
