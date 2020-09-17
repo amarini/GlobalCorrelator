@@ -2,6 +2,7 @@
 #define fifo_unit_tests_h
 
 #include "ap_int.h"
+#include "hls_stream.h"
 
 struct Track {
     ap_uint<14> pt;
@@ -35,16 +36,37 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 
 
 
+#define REGIONIZER_SMALL
+#define ROUTER_NOMERGE
+//#define ROUTER_M2
 
-#define NSECTORS 3 // 9
+#ifdef REGIONIZER_SMALL
+#define NSECTORS 3
+#else 
+#define NSECTORS 9
+#endif
 #define NFIBERS  2
-#define NREGIONS NSECTORS
-#define NFIFOS   6
+
+#ifdef ROUTER_NOMERGE
+    #define NFIFOS   6
+    #define NREGIONS NSECTORS*NFIFOS
+    #define ALGO_LATENCY 2
+#elif defined(ROUTER_M2)
+    #define NFIFOS   6
+    #define NREGIONS NSECTORS*(NFIFOS/2)
+    #define ALGO_LATENCY 2
+#else
+    #define NREGIONS NSECTORS
+    #define NFIFOS   6
+    #define ALGO_LATENCY 3
+#endif
 #define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
 
-#define FIFO_READ_TREE // algorithm that those the 6->1 FIFO reduction with a tree
-
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
+void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out);
+void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out);
+
+void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out);
 
 #ifndef __SYNTHESIS__
 #include <cstdio>
@@ -62,8 +84,8 @@ inline void printTrackShort(FILE *f, const Track & t) {
     else if (t.phi <-200) shortphi = -3;
     else if (t.phi <-100) shortphi = -2;
     else if (t.phi <   0) shortphi = -1;
-    fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
-    //fprintf(f,"%3d %02d  ", t.pt.to_int(), t.rest.to_int());
+    //fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
+    fprintf(f,"%3d.%02d ", t.pt.to_int(), t.rest.to_int());
 }
 #endif
 

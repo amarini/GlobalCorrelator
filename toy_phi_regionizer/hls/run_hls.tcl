@@ -5,6 +5,7 @@ set_top ${hlsTopFunc}
 
 add_files src/phi_regionizer.cpp -cflags "-std=c++0x"
 add_files -tb phi_regionizer_test.cpp -cflags "-std=c++0x"
+#add_files -tb phi_regionizer_test.cpp -cflags "-std=c++0x -DEMP_PACKED_64"
 
 open_solution -reset "solution"
 set_part {xcvu9p-flga2104-2L-e}

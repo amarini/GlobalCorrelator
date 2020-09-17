@@ -14,8 +14,15 @@ IMPL=project/solution/impl/vhdl
 rm -r xsim* xelab* webtalk* vivado* xvhdl* test.wdb 2> /dev/null || true;
 
 
-echo " ## Compiling VHDL files: ";
-for V in $IMPL/route_link2fifo.vhd $IMPL/router_monolythic_fifos_data_V_0.vhd $IMPL/router_monolythic.vhd phi_regionizer_tb.vhd; do
+VHDLS="$IMPL/route_link2fifo.vhd $IMPL/router_monolythic_fifos_data_V_0.vhd $IMPL/router_monolythic.vhd phi_regionizer_tb.vhd"
+if [[ "$1" == "hls_nomerge" ]]; then
+    VHDLS="$IMPL/route_link2fifo.vhd $IMPL/router_nomerge_fifos_data_V_0.vhd $IMPL/router_nomerge.vhd phi_regionizer_nomerge_tb.vhd"
+elif [[ "$1" == "vhdl_nomerge" ]]; then
+    VHDLS=" regionizer_data.vhd rolling_fifo.vhd phi_regionizer_nomerge.vhd phi_regionizer_nomerge_vhdl_tb.vhd"
+fi
+
+echo " ## Compiling VHDL files: $VHDLS";
+for V in $VHDLS; do
     xvhdl $V || exit 2;
     grep -q ERROR xvhdl.log && exit 2;
 done;
