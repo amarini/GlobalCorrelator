@@ -9,7 +9,7 @@
 //    #define NTEST 10
  //   #define TLEN  36
 //#else
-    #define NTEST 15
+    #define NTEST 50
     #define TLEN  54
     //#define TLEN  10
 //#endif
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
         std::vector<Track> inputs[NSECTORS][NFIBERS];
         Track output[NREGIONS][TLEN], output_ref[NREGIONS][2*TLEN];
         for (int s = 0; s < NSECTORS; ++s) {
-            int ntracks = abs(rand())%3 + (TLEN/6) + itest/3; // start with some random number of tracks
+            int ntracks = abs(rand())%3 + (TLEN/6) + itest/(NTEST/5); // start with some random number of tracks
             if ((itest % 2 == 1) && ((abs(rand()) % (NSECTORS/2)) == 0)) {
                 ntracks += (TLEN/4 + abs(rand()) % (TLEN/2));  // in 1/2 of the events, may add some "jets" in some sectors
             }

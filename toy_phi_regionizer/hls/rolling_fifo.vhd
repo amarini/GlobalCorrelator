@@ -52,7 +52,7 @@ begin
             DOUTBDOUT => q64(63 downto 32),
             DOUTPADOUTP => open,
             DOUTPBDOUTP => open,
-            ENARDEN => valid_next,
+            ENARDEN => valid_next, -- avoid collisions 
             ENBWREN => wren,
             REGCEAREGCE => '1',
             REGCEB => '0',
@@ -88,7 +88,7 @@ begin
      --- combinatorical
      raddr(14 downto 12) <= (others => '0');
      waddr(14 downto 12) <= (others => '0');
-     raddr(11 downto 6) <= std_logic_vector(rptr);
+     raddr(11 downto 6) <= std_logic_vector(rptr) when valid_next = '1' else (others => '0'); -- avoid collision
      waddr(11 downto 6) <= std_logic_vector(wptr);
      raddr(5 downto 0) <= (others => '0');
      waddr(5 downto 0) <= (others => '0');
