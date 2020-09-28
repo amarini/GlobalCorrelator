@@ -13,9 +13,9 @@ entity rolling_fifo is
         write_in : in std_logic;
         d_out    : out particle;
         valid_out : out std_logic;
-        will_read  : in std_logic;
-        roll     : in  std_logic;
-        roll_out : out std_logic
+        full      : in std_logic;
+        roll      : in  std_logic;
+        roll_out  : out std_logic
     );
 end rolling_fifo;
 
@@ -26,6 +26,9 @@ architecture Behavioral of rolling_fifo is
     signal wptr : unsigned(5 downto 0) := (others => '0');         -- need to count up to 63
     signal wren, valid_next : std_logic := '0';
     signal roll_delay: std_logic_vector(2 downto 0) := (others => '0');
+    signal cache : particle;
+    signal cache_valid, mem_out_valid : std_logic := '0';
+    signal use_cache   : std_logic := '0';
 begin
     ram: RAMB36E2
         generic map(
@@ -93,10 +96,11 @@ begin
      raddr(5 downto 0) <= (others => '0');
      waddr(5 downto 0) <= (others => '0');
 
-     d_out.pt   <= unsigned(q64(63 downto 50));
-     d_out.eta  <=   signed(q64(49 downto 38));
-     d_out.phi  <=   signed(q64(37 downto 26));
-     d_out.rest <= unsigned(q64(25 downto  0));
+     d_out.pt   <= cache.pt   when use_cache = '1' else unsigned(q64(63 downto 50));
+     d_out.eta  <= cache.eta  when use_cache = '1' else   signed(q64(49 downto 38));
+     d_out.phi  <= cache.phi  when use_cache = '1' else   signed(q64(37 downto 26));
+     d_out.rest <= cache.rest when use_cache = '1' else unsigned(q64(25 downto  0));
+     valid_out  <= cache_valid when use_cache = '1' else mem_out_valid;
 
      roll_out <= roll_delay(2);
      
@@ -121,7 +125,7 @@ begin
 
                 if roll_delay(0) = '1' then
                     rptr_next := to_unsigned(1, wptr'length);
-                elsif will_read = '1' and valid_next = '1' then
+                elsif full = '0' and valid_next = '1' then
                     rptr_next := rptr + to_unsigned(1, rptr'length);
                 else
                     rptr_next := rptr;
@@ -133,7 +137,17 @@ begin
                 else
                     valid_next <= '0';
                 end if;
-                valid_out <= valid_next;
+
+                if full = '0' then
+                    cache.pt    <= unsigned(q64(63 downto 50));
+                    cache.eta   <=   signed(q64(49 downto 38));
+                    cache.phi   <=   signed(q64(37 downto 26));
+                    cache.rest  <= unsigned(q64(25 downto  0));
+                    cache_valid <= valid_next;
+                end if;
+                mem_out_valid <= valid_next;
+
+                use_cache <= full;
 
             end if;
 

@@ -186,6 +186,7 @@ entity regionizer_nomerge is
 end regionizer_nomerge;
 
 architecture Behavioral of regionizer_nomerge is
+    constant NREGIONS : natural := NSECTORS*NFIFOS;
 
     signal links_in :       particles(NSECTORS*NFIBERS-1 downto 0);
     signal fifo_in :        particles(NREGIONS-1 downto 0);
@@ -194,7 +195,6 @@ architecture Behavioral of regionizer_nomerge is
 
     signal fifo_out :        particles(NREGIONS-1 downto 0);
     signal fifo_out_valid :  std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
-    signal fifo_out_wasread: std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
     signal fifo_out_roll:    std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
     signal regions_out :      particles(NREGIONS-1 downto 0);
     signal regions_out_valid: std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
@@ -210,7 +210,7 @@ begin
                                  roll   => fifo_in_roll(ireg),
                                  d_out    => fifo_out(ireg),
                                  valid_out  => fifo_out_valid(ireg),
-                                 will_read  => '1',
+                                 full  => '0',
                                  roll_out  => fifo_out_roll(ireg)
                              );
     end generate;
@@ -301,14 +301,12 @@ begin
             for ireg in 0 to NREGIONS-1 loop
                 if fifo_out_valid(ireg) = '1' then
                     regions_out(ireg) <= fifo_out(ireg);
-                    fifo_out_wasread(ireg) <= '1';
                     regions_out_valid(ireg) <= '1';
                 else
                     regions_out(ireg).pt   <= (others => '0');
                     regions_out(ireg).eta  <= (others => '0');
                     regions_out(ireg).phi  <= (others => '0');
                     regions_out(ireg).rest <= (others => '0');
-                    fifo_out_wasread(ireg) <= '0';
                     regions_out_valid(ireg) <= '1';
                 end if;
                 regions_out_roll(ireg) <= fifo_out_roll(ireg);

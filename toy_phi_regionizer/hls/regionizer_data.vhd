@@ -14,7 +14,6 @@ package regionizer_data is
     constant NSECTORS : natural := 3;
     constant NFIBERS : natural := 2;
     constant NFIFOS : natural := NFIBERS*3;
-    constant NREGIONS : natural := NSECTORS*NFIFOS;
 end package;
 
 
