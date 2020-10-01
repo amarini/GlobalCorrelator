@@ -214,7 +214,7 @@ void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
     }
 }
 
-void router_m2_fail(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out)
+void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out)
 {
     #pragma HLS pipeline II=1 enable_flush
     #pragma HLS array_partition variable=tracks_in  complete dim=0
@@ -285,6 +285,7 @@ void router_m2_fail(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
     }
 }
 
+#if 0
 void merge_stream(hls::stream<Track> &in1, hls::stream<Track> &in2, hls::stream<Track> &out, bool roll, bool & roll_out) {
     if (roll) {
         if (!in1.empty()) in1.read(); // discard whatever was there
@@ -355,7 +356,7 @@ void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tr
     newevent_out = merge_roll[0][0];
 
 }
-
+#endif
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {

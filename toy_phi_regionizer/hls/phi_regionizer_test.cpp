@@ -212,6 +212,9 @@ int main(int argc, char **argv) {
             for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_out[r]);
             fprintf(stdout, "\n"); fflush(stdout);
 
+#ifdef ROUTER_M2
+            continue;
+#endif
             // begin validation
             if (newev_ref) { 
                 pingpong = 1-pingpong;

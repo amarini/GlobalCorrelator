@@ -19,6 +19,8 @@ if [[ "$1" == "hls_nomerge" ]]; then
     VHDLS="$IMPL/route_link2fifo.vhd $IMPL/router_nomerge_fifos_data_V_0.vhd $IMPL/router_nomerge.vhd phi_regionizer_nomerge_tb.vhd"
 elif [[ "$1" == "vhdl_nomerge" ]]; then
     VHDLS=" regionizer_data.vhd rolling_fifo.vhd phi_regionizer_nomerge.vhd phi_regionizer_nomerge_vhdl_tb.vhd"
+elif [[ "$1" == "vhdl_m2" ]]; then
+    VHDLS=" regionizer_data.vhd rolling_fifo.vhd fifo_merge2.vhd phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
 fi
 
 echo " ## Compiling VHDL files: $VHDLS";
