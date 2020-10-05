@@ -441,14 +441,36 @@ begin
     dbg_sec2_fifo5_d(63 downto 34) <= (others => '0');
 
 
-    dbg_sec0_merge0 <= merged_dbg(0);
-    dbg_sec0_merge1 <= merged_dbg(1);
-    dbg_sec0_merge2 <= merged_dbg(2);
-    dbg_sec1_merge0 <= merged_dbg(3);
-    dbg_sec1_merge1 <= merged_dbg(4);
-    dbg_sec1_merge2 <= merged_dbg(5);
-    dbg_sec2_merge0 <= merged_dbg(6);
-    dbg_sec2_merge1 <= merged_dbg(7);
-    dbg_sec2_merge2 <= merged_dbg(8);
+    dbg_sec0_merge0(48 downto 0) <= merged_dbg(0)(48 downto 0);
+    dbg_sec0_merge1(48 downto 0) <= merged_dbg(1)(48 downto 0);
+    dbg_sec0_merge2(48 downto 0) <= merged_dbg(2)(48 downto 0);
+    dbg_sec1_merge0(48 downto 0) <= merged_dbg(3)(48 downto 0);
+    dbg_sec1_merge1(48 downto 0) <= merged_dbg(4)(48 downto 0);
+    dbg_sec1_merge2(48 downto 0) <= merged_dbg(5)(48 downto 0);
+    dbg_sec2_merge0(48 downto 0) <= merged_dbg(6)(48 downto 0);
+    dbg_sec2_merge1(48 downto 0) <= merged_dbg(7)(48 downto 0);
+    dbg_sec2_merge2(48 downto 0) <= merged_dbg(8)(48 downto 0);
+
+    dbg_sec0_merge0(62 downto 49) <= std_logic_vector(merged_out(0).pt);
+    dbg_sec0_merge1(62 downto 49) <= std_logic_vector(merged_out(1).pt);
+    dbg_sec0_merge2(62 downto 49) <= std_logic_vector(merged_out(2).pt);
+    dbg_sec1_merge0(62 downto 49) <= std_logic_vector(merged_out(3).pt);
+    dbg_sec1_merge1(62 downto 49) <= std_logic_vector(merged_out(4).pt);
+    dbg_sec1_merge2(62 downto 49) <= std_logic_vector(merged_out(5).pt);
+    dbg_sec2_merge0(62 downto 49) <= std_logic_vector(merged_out(6).pt);
+    dbg_sec2_merge1(62 downto 49) <= std_logic_vector(merged_out(7).pt);
+    dbg_sec2_merge2(62 downto 49) <= std_logic_vector(merged_out(8).pt);
+
+    dbg_sec0_merge0(63) <= merged_out_valid(0);
+    dbg_sec0_merge1(63) <= merged_out_valid(1);
+    dbg_sec0_merge2(63) <= merged_out_valid(2);
+    dbg_sec1_merge0(63) <= merged_out_valid(3);
+    dbg_sec1_merge1(63) <= merged_out_valid(4);
+    dbg_sec1_merge2(63) <= merged_out_valid(5);
+    dbg_sec2_merge0(63) <= merged_out_valid(6);
+    dbg_sec2_merge1(63) <= merged_out_valid(7);
+    dbg_sec2_merge2(63) <= merged_out_valid(8);
+
+
 
 end Behavioral;

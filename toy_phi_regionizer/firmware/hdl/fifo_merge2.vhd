@@ -52,7 +52,7 @@ begin
                     full1 <= '0';
                     full2_i <= d1_valid and d2_valid;
                 else
-                    load2 := (d1_valid or queue_valid);
+                    load2 := (d1_valid or queue_valid) and not (full2_i);
                     if d1_valid = '1' then
                         d_out <= d1_in; 
                     elsif queue_valid = '1' then

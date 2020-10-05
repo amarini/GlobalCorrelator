@@ -182,25 +182,36 @@ begin
                     valid_next <= '0';
                 end if;
 
-                if full = '0' or (cache_valid = '0' and mem_out_valid = '1') then
+                if full = '1' and ((use_cache = '1' and cache_valid = '1') or (use_cache = '0' and mem_out_valid = '1')) then
+                    if use_cache = '0' then
+                        cache.pt    <= unsigned(q64(63 downto 50));
+                        cache.eta   <=   signed(q64(49 downto 38));
+                        cache.phi   <=   signed(q64(37 downto 26));
+                        cache.rest  <= unsigned(q64(25 downto  0));
+                        cache_valid <= mem_out_valid;
+                    end if;
+                    use_cache <= '1';
+                else 
                     cache.pt    <= unsigned(q64(63 downto 50));
                     cache.eta   <=   signed(q64(49 downto 38));
                     cache.phi   <=   signed(q64(37 downto 26));
                     cache.rest  <= unsigned(q64(25 downto  0));
                     cache_valid <= mem_out_valid;
+                    use_cache   <= '0';
                 end if;
                 mem_out_valid <= valid_next;
-
-                use_cache <= full;
 
             end if;
 
         end process;
 
 
-        dbg_w64 <= (0 => valid_next, 1 => use_cache, 2 => cache_valid,
-                    16 => rptr(0), 17 => rptr(1), 18 => rptr(2), 19 => rptr(3), 20 => rptr(4), 21 => rptr(5),
-                    32 => wptr(0), 33 => wptr(1), 34 => wptr(2), 35 => wptr(3), 36 => wptr(4), 37 => wptr(5),
-                    others => '0');
+        dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, others => '0');
+        dbg_w64(21 downto 16) <= std_logic_vector(rptr);
+        dbg_w64(31 downto 22) <= (others => '0');
+        dbg_w64(37 downto 32) <= std_logic_vector(wptr);
+        dbg_w64(47 downto 38) <= (others => '0');
+        dbg_w64(61 downto 48) <= std_logic_vector(cache.pt);
+        dbg_w64(63 downto 62) <= (others => '0');
     
 end Behavioral;
