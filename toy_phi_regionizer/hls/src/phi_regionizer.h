@@ -38,7 +38,7 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 
 #define REGIONIZER_SMALL
 //#define ROUTER_NOMERGE
-#define ROUTER_M2
+//#define ROUTER_M2
 
 #ifdef REGIONIZER_SMALL
 #define NSECTORS 3

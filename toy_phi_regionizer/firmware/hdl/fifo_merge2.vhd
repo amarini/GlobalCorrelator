@@ -22,6 +22,9 @@ entity fifo_merge2 is
         valid_out  : out std_logic;
         full1      : out std_logic;
         full2      : out std_logic;
+        -- begin debug
+        dbg_w64    : out std_logic_vector(63 downto 0);
+        -- end debug
         roll_out   : out std_logic
     );
 end fifo_merge2;
@@ -40,7 +43,7 @@ begin
                     if d1_valid = '1' then
                         d_out <= d1_in;
                     else
-                        d_out <=  d2_in;
+                        d_out <= d2_in;
                     end if;
                     valid_out <= d1_valid or d2_valid;
                     roll_out  <= '1';
@@ -61,7 +64,7 @@ begin
                     valid_out <= d1_valid or d2_valid or queue_valid;
                     roll_out <= '0';
                     full1 <= '0';
-                    full2 <= d1_valid and (d2_valid or queue_valid);
+                    full2_i <= d1_valid and (d2_valid or queue_valid);
                     if load2 = '1' then
                         queue <= d2_in;
                         queue_valid <= d2_valid;
@@ -71,5 +74,11 @@ begin
                 end if; 
             end if;
         end process;
+
+        full2 <= full2_i;
+
+        dbg_w64(13 downto 0) <= std_logic_vector(queue.pt);
+        dbg_w64(14) <= queue_valid;
+        dbg_w64(63 downto 15) <= (others => '0');
 
 end Behavioral;

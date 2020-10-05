@@ -204,6 +204,7 @@ begin
 
     gen_fifos: for ireg in NREGIONS-1 downto 0 generate
         reg_buffer : entity work.rolling_fifo
+                        --generic map(FIFO_INDEX => ireg+1)
                         port map(ap_clk => ap_clk, 
                                  d_in    => fifo_in(ireg),
                                  write_in  => fifo_in_write(ireg),

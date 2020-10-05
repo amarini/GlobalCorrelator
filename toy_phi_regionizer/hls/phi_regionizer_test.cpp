@@ -67,7 +67,7 @@ struct RegionBuffer {
 #ifdef ROUTER_M2
         for (int j = 0; j < NFIFOS/2; ++j) {
             clear(out[j]); 
-            for (int f = 2*j; f < 2*j+1; ++f) {
+            for (int f = 2*j; f <= 2*j+1; ++f) {
                 if (!fifos[f].empty()) {
                     out[j] = fifos[f].back();
                     fifos[f].pop_back(); 
@@ -151,9 +151,9 @@ int main(int argc, char **argv) {
             }
             for (int f = 0; f < NFIBERS; ++f) {
                 int ntracks_fiber = ntracks + abs(rand()) % 4; // and add a bit of randomness between the two fibers
-                if (itest <= 2) ntracks_fiber = (s == 0 && f == 0 ? TLEN : 0);
+                //if (itest <= 2) ntracks_fiber = (s == 0 && f == 0 ? TLEN : 0);
                 for (int i = 0; i < ntracks_fiber; ++i) {
-                    inputs[s][f].push_back(randTrack(itest == 0 ? i+1 : 10*(s+1)+f+1));
+                    inputs[s][f].push_back(randTrack(itest <= 2 ? 100*itest+i+1 : 100*itest+10*(s+1)+f+1));
                 }
             }
         }

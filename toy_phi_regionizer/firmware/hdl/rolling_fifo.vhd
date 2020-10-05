@@ -7,6 +7,9 @@ use unisim.vcomponents.all;
 use work.regionizer_data.all;
 
 entity rolling_fifo is
+    --generic(
+    --    FIFO_INDEX : natural := 0
+    --);
     port(
         ap_clk   : in std_logic;
         d_in     : in particle;
@@ -14,6 +17,9 @@ entity rolling_fifo is
         d_out    : out particle;
         valid_out : out std_logic;
         full      : in std_logic;
+    -- debug
+        dbg_w64         : out std_logic_vector(63 downto 0);
+    -- end debug
         roll      : in  std_logic;
         roll_out  : out std_logic
     );
@@ -37,8 +43,8 @@ begin
             DOB_REG => 0,
             READ_WIDTH_A => 72,
             WRITE_WIDTH_B => 72,
-            WRITE_MODE_A => "WRITE_FIRST",
-            WRITE_MODE_B => "WRITE_FIRST"
+            WRITE_MODE_A => "READ_FIRST", --"WRITE_FIRST",
+            WRITE_MODE_B => "READ_FIRST" --"WRITE_FIRST"
         )
         port map(
             ADDRENA => '1',
@@ -96,18 +102,56 @@ begin
      raddr(5 downto 0) <= (others => '0');
      waddr(5 downto 0) <= (others => '0');
 
-     d_out.pt   <= cache.pt   when use_cache = '1' else unsigned(q64(63 downto 50));
-     d_out.eta  <= cache.eta  when use_cache = '1' else   signed(q64(49 downto 38));
-     d_out.phi  <= cache.phi  when use_cache = '1' else   signed(q64(37 downto 26));
-     d_out.rest <= cache.rest when use_cache = '1' else unsigned(q64(25 downto  0));
-     valid_out  <= cache_valid when use_cache = '1' else mem_out_valid;
+     --d_out.pt   <= cache.pt   when use_cache = '1' else unsigned(q64(63 downto 50));
+     --d_out.eta  <= cache.eta  when use_cache = '1' else   signed(q64(49 downto 38));
+     --d_out.phi  <= cache.phi  when use_cache = '1' else   signed(q64(37 downto 26));
+     --d_out.rest <= cache.rest when use_cache = '1' else unsigned(q64(25 downto  0));
+     --valid_out  <= cache_valid when use_cache = '1' else mem_out_valid;
+
+     out_switch: process(cache,q64,use_cache)
+     begin
+         if use_cache = '1' then
+             d_out.pt   <= cache.pt  ;
+             d_out.eta  <= cache.eta ;
+             d_out.phi  <= cache.phi ;
+             d_out.rest <= cache.rest;
+         else
+             d_out.pt   <= unsigned(q64(63 downto 50));
+             d_out.eta  <=   signed(q64(49 downto 38));
+             d_out.phi  <=   signed(q64(37 downto 26));
+             d_out.rest <= unsigned(q64(25 downto  0));
+         end if;
+      end process;
+     valid_out_switch: process(cache_valid,mem_out_valid,use_cache)
+     begin
+         if use_cache = '1' then
+             valid_out  <= cache_valid;
+         else
+             valid_out  <= mem_out_valid;
+         end if;
+      end process;
+
 
      roll_out <= roll_delay(2);
      
+
      logic: process(ap_clk) 
            variable rptr_next : unsigned(5 downto 0);
         begin
             if rising_edge(ap_clk) then
+                
+  -- assert rptr /= wptr or wren = '0'  report "Unexpected collision at " & 
+  --        " FIFO index " & integer'image(FIFO_INDEX) &
+  --        " rptr = wptr = " & integer'image(to_integer(rptr)) &
+  --        " wren = " & std_logic'image(wren) & 
+  --        " valid_next = " & std_logic'image(valid_next) & 
+  --        " d_in(pt = " & integer'image(to_integer(d_in.pt)) &
+  --        " eta = " & integer'image(to_integer(d_in.eta)) &
+  --        " phi = " & integer'image(to_integer(d_in.phi)) &
+  --        " rest = " & integer'image(to_integer(d_in.rest)) &
+  --        ") write_in = " & std_logic'image(write_in) & 
+  --        ", roll = " & std_logic'image(roll)  severity warning;
+
                 if roll = '1' then
                     wptr <= (0 => write_in, others => '0');
                 elsif write_in = '1' then
@@ -138,12 +182,12 @@ begin
                     valid_next <= '0';
                 end if;
 
-                if full = '0' then
+                if full = '0' or (cache_valid = '0' and mem_out_valid = '1') then
                     cache.pt    <= unsigned(q64(63 downto 50));
                     cache.eta   <=   signed(q64(49 downto 38));
                     cache.phi   <=   signed(q64(37 downto 26));
                     cache.rest  <= unsigned(q64(25 downto  0));
-                    cache_valid <= valid_next;
+                    cache_valid <= mem_out_valid;
                 end if;
                 mem_out_valid <= valid_next;
 
@@ -153,5 +197,10 @@ begin
 
         end process;
 
+
+        dbg_w64 <= (0 => valid_next, 1 => use_cache, 2 => cache_valid,
+                    16 => rptr(0), 17 => rptr(1), 18 => rptr(2), 19 => rptr(3), 20 => rptr(4), 21 => rptr(5),
+                    32 => wptr(0), 33 => wptr(1), 34 => wptr(2), 35 => wptr(3), 36 => wptr(4), 37 => wptr(5),
+                    others => '0');
     
 end Behavioral;

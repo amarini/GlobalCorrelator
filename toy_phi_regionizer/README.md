@@ -28,6 +28,6 @@ There is one additional boolean input that is set to true in the first clock cyc
 ## Running
 
 In the HLS directory:
- * `run_hls.tcl` for the HLS
+ * `run_hls_xyz.tcl` for the HLS
  * `run_vhdltb.sh` for the behavioural simulation in VHDL
 

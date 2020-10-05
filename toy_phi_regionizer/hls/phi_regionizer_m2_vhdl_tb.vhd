@@ -19,6 +19,8 @@ architecture Behavioral of testbench is
     type pt_vect     is array(natural range <>) of std_logic_vector(13 downto 0);
     type etaphi_vect is array(natural range <>) of std_logic_vector(11 downto 0);
     type rest_vect   is array(natural range <>) of std_logic_vector(25 downto 0);
+    
+    type w64_vec     is array(natural range <>) of std_logic_vector(63 downto 0);
 
     signal clk : std_logic := '0';
     signal rst : std_logic := '0';
@@ -32,8 +34,12 @@ architecture Behavioral of testbench is
     signal rest_in:  rest_vect(NSECTORS*NFIBERS-1 downto 0); -- of std_logic_vector(25 downto 0);
     signal rest_out: rest_vect(NREGIONS-1         downto 0); -- of std_logic_vector(25 downto 0);
 
+    signal fifo_dbg, fifo_dbg_d: w64_vec(NSECTORS*NFIFOS-1 downto 0);
+    signal merger_dbg: w64_vec(NREGIONS-1 downto 0);
+
     file Fi : text open read_mode is "input.txt";
     file Fo : text open write_mode is "output_vhdl_tb.txt";
+    file Fd : text open write_mode is "debug_vhdl_tb.txt";
 
 
 begin
@@ -106,6 +112,53 @@ begin
                  tracks_out_8_eta_V => eta_out(8),
                  tracks_out_8_phi_V => phi_out(8),
                  tracks_out_8_rest_V => rest_out(8),
+                 -- begin debug
+                 dbg_sec0_fifo0 => fifo_dbg(0),
+                 dbg_sec0_fifo1 => fifo_dbg(1),
+                 dbg_sec0_fifo2 => fifo_dbg(2),
+                 dbg_sec0_fifo3 => fifo_dbg(3),
+                 dbg_sec0_fifo4 => fifo_dbg(4),
+                 dbg_sec0_fifo5 => fifo_dbg(5),
+                 dbg_sec1_fifo0 => fifo_dbg(6),
+                 dbg_sec1_fifo1 => fifo_dbg(7),
+                 dbg_sec1_fifo2 => fifo_dbg(8),
+                 dbg_sec1_fifo3 => fifo_dbg(9),
+                 dbg_sec1_fifo4 => fifo_dbg(10),
+                 dbg_sec1_fifo5 => fifo_dbg(11),
+                 dbg_sec2_fifo0 => fifo_dbg(12),
+                 dbg_sec2_fifo1 => fifo_dbg(13),
+                 dbg_sec2_fifo2 => fifo_dbg(14),
+                 dbg_sec2_fifo3 => fifo_dbg(15),
+                 dbg_sec2_fifo4 => fifo_dbg(16),
+                 dbg_sec2_fifo5 => fifo_dbg(17),
+                 dbg_sec0_fifo0_d => fifo_dbg_d(0),
+                 dbg_sec0_fifo1_d => fifo_dbg_d(1),
+                 dbg_sec0_fifo2_d => fifo_dbg_d(2),
+                 dbg_sec0_fifo3_d => fifo_dbg_d(3),
+                 dbg_sec0_fifo4_d => fifo_dbg_d(4),
+                 dbg_sec0_fifo5_d => fifo_dbg_d(5),
+                 dbg_sec1_fifo0_d => fifo_dbg_d(6),
+                 dbg_sec1_fifo1_d => fifo_dbg_d(7),
+                 dbg_sec1_fifo2_d => fifo_dbg_d(8),
+                 dbg_sec1_fifo3_d => fifo_dbg_d(9),
+                 dbg_sec1_fifo4_d => fifo_dbg_d(10),
+                 dbg_sec1_fifo5_d => fifo_dbg_d(11),
+                 dbg_sec2_fifo0_d => fifo_dbg_d(12),
+                 dbg_sec2_fifo1_d => fifo_dbg_d(13),
+                 dbg_sec2_fifo2_d => fifo_dbg_d(14),
+                 dbg_sec2_fifo3_d => fifo_dbg_d(15),
+                 dbg_sec2_fifo4_d => fifo_dbg_d(16),
+                 dbg_sec2_fifo5_d => fifo_dbg_d(17),
+                 dbg_sec0_merge0 => merger_dbg(0),
+                 dbg_sec0_merge1 => merger_dbg(1),
+                 dbg_sec0_merge2 => merger_dbg(2),
+                 dbg_sec1_merge0 => merger_dbg(3),
+                 dbg_sec1_merge1 => merger_dbg(4),
+                 dbg_sec1_merge2 => merger_dbg(5),
+                 dbg_sec2_merge0 => merger_dbg(6),
+                 dbg_sec2_merge1 => merger_dbg(7),
+                 dbg_sec2_merge2 => merger_dbg(8),
+                 -- end debug
                  newevent => newevent,
                  newevent_out => newevent_out
              );
@@ -151,10 +204,10 @@ begin
             write(Lo, newevent_out); 
             write(Lo, string'(" ")); 
             for i in 0 to NREGIONS-1 loop 
-                write(Lo, to_integer(unsigned(pt_out(i))),   field => 6); 
-                write(Lo, to_integer(signed(eta_out(i))),    field => 6); 
-                write(Lo, to_integer(signed(phi_out(i))),    field => 6); 
-                write(Lo, to_integer(unsigned(rest_out(i))), field => 6); 
+                write(Lo, to_integer(unsigned(pt_out(i))),   field => 5); 
+                write(Lo, to_integer(signed(eta_out(i))),    field => 5); 
+                write(Lo, to_integer(signed(phi_out(i))),    field => 5); 
+                write(Lo, to_integer(unsigned(rest_out(i))), field => 5); 
             end loop;
             write(Lo, string'(" |  ready ")); 
             write(Lo, ready); 
@@ -163,7 +216,35 @@ begin
             write(Lo, string'("  done ")); 
             write(Lo, done); 
             writeline(Fo, Lo);
+            write(Lo, frame, field=>5);  
+            write(Lo, string'(" ")); 
+
+            for isec in 0 to NSECTORS-1 loop 
+                for imerge in 0 to (NFIFOS/2)-1 loop 
+                    for ififo in 2*imerge to 2*imerge+1 loop
+                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(0)); 
+                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(1)); 
+                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(2)); 
+                        write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(37 downto 32))), field => 3); 
+                        write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(21 downto 16))), field => 3); 
+                        write(Lo, string'(" ")); 
+                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(32)); 
+                        write(Lo, to_integer(unsigned(fifo_dbg_d(isec*NFIFOS+ififo)(13 downto 0))), field => 4); 
+                        write(Lo, string'(" ")); 
+                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(33)); 
+                        write(Lo, string'(" | ")); 
+                    end loop;
+                    write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(14)); 
+                    write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(13 downto 0))), field => 4); 
+                    if imerge /= (NFIFOS/2)-1 then
+                        write(Lo, string'(" | ")); 
+                    end if;
+                end loop;
+                write(Lo, string'(" || ")); 
+            end loop;
+            writeline(Fd, Lo);
             frame := frame + 1;
+            if frame >= 50 then finish(0); end if;
         end loop;
         wait for 50 ns;
         finish(0);
