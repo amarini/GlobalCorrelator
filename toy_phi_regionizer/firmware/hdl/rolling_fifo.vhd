@@ -137,6 +137,7 @@ begin
 
      logic: process(ap_clk) 
            variable rptr_next : unsigned(5 downto 0);
+           variable full_and_valid_out : boolean;
         begin
             if rising_edge(ap_clk) then
                 
@@ -167,9 +168,11 @@ begin
                 roll_delay(0) <= roll;
                 roll_delay(2 downto 1) <= roll_delay(1 downto 0);
 
+                full_and_valid_out := roll_delay(1) = '0' and full = '1' and ((use_cache = '1' and cache_valid = '1') or (use_cache = '0' and mem_out_valid = '1'));
+
                 if roll_delay(0) = '1' then
                     rptr_next := to_unsigned(1, wptr'length);
-                elsif full = '0' and valid_next = '1' then
+                elsif not(full_and_valid_out) and valid_next = '1' then
                     rptr_next := rptr + to_unsigned(1, rptr'length);
                 else
                     rptr_next := rptr;
@@ -182,7 +185,7 @@ begin
                     valid_next <= '0';
                 end if;
 
-                if full = '1' and ((use_cache = '1' and cache_valid = '1') or (use_cache = '0' and mem_out_valid = '1')) then
+                if full_and_valid_out then
                     if use_cache = '0' then
                         cache.pt    <= unsigned(q64(63 downto 50));
                         cache.eta   <=   signed(q64(49 downto 38));
@@ -206,7 +209,7 @@ begin
         end process;
 
 
-        dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, others => '0');
+        dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, 4 => wren, others => '0');
         dbg_w64(21 downto 16) <= std_logic_vector(rptr);
         dbg_w64(31 downto 22) <= (others => '0');
         dbg_w64(37 downto 32) <= std_logic_vector(wptr);

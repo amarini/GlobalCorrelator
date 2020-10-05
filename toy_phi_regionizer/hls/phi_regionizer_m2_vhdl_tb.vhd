@@ -222,6 +222,7 @@ begin
             for isec in 0 to NSECTORS-1 loop 
                 for imerge in 0 to (NFIFOS/2)-1 loop 
                     for ififo in 2*imerge to 2*imerge+1 loop
+                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(4)); 
                         write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(37 downto 32))), field => 3); 
                         write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(21 downto 16))), field => 3); 
                         write(Lo, string'(" ")); 
@@ -231,16 +232,18 @@ begin
                         write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(61 downto 48))), field => 4); 
                         write(Lo, string'(" ")); 
                         write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(32)); 
+                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(33)); 
                         write(Lo, to_integer(unsigned(fifo_dbg_d(isec*NFIFOS+ififo)(13 downto 0))), field => 4); 
                         write(Lo, string'(" "));
-                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(33)); 
+                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(34)); 
                         write(Lo, string'(" | ")); 
                     end loop;
                     write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(14)); 
                     write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(13 downto 0))), field => 4); 
                     write(Lo, string'(" "));
+                    write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(62)); 
                     write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(63)); 
-                    write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(62 downto 49))), field => 4); 
+                    write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(61 downto 48))), field => 4); 
                     if imerge /= (NFIFOS/2)-1 then
                         write(Lo, string'(" | ")); 
                     end if;
