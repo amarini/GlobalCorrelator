@@ -32,10 +32,11 @@ Track randTrack(int payload = -1, float prob=1) {
 
 struct RegionBuffer { 
     std::list<Track> fifos[NFIFOS]; 
-    Track staging_area[NFIFOS/2];
+    Track staging_area[NFIFOS/2], queue[NFIFOS/2];
     void flush() { 
         for (int j = 0; j < NFIFOS; ++j) fifos[j].clear(); 
         for (int j = 0; j < NFIFOS/2; ++j) clear(staging_area[j]);
+        for (int j = 0; j < NFIFOS/2; ++j) clear(queue[j]);
     }
     void push(int f, const Track & tk, int phi_shift=0) {
         fifos[f].push_front(shiftedTrack(tk, phi_shift));
@@ -53,6 +54,7 @@ struct RegionBuffer {
                 fifos[2*j+1].pop_back(); 
             }
         }
+    #if 0
         // then from staging area to output
         for (int j = 0; j < NFIFOS/2; ++j) {
             if (staging_area[j].pt != 0) {
@@ -61,6 +63,22 @@ struct RegionBuffer {
                 break;
             }
         }
+    #else
+        // then from staging area to output
+        for (int j = 0; j < NFIFOS/2; ++j) {
+            if (staging_area[j].pt != 0 && queue[j].pt == 0) {
+                queue[j] = staging_area[j];
+                clear(staging_area[j]);
+            }
+        }
+        for (int j = 0; j < NFIFOS/2; ++j) {
+            if (queue[j].pt != 0) {
+                ret = queue[j];
+                clear(queue[j]);
+                break;
+            }
+        }
+    #endif
         return ret;
     }
     void pop_all(Track out[]) {
@@ -212,7 +230,7 @@ int main(int argc, char **argv) {
             for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_out[r]);
             fprintf(stdout, "\n"); fflush(stdout);
 
-#ifdef ROUTER_M2
+#ifndef ROUTER_NOMERGE
             continue;
 #endif
             // begin validation

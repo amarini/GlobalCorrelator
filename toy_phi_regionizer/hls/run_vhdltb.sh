@@ -12,6 +12,9 @@ elif [[ "$1" == "vhdl_nomerge" ]]; then
 elif [[ "$1" == "vhdl_m2" ]]; then
     VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
     HLSPROJ="project_m2"
+elif [[ "$1" == "vhdl" ]]; then
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/phi_regionizer.vhd phi_regionizer_vhdl_tb.vhd"
+    HLSPROJ="project"
 fi
 
 
