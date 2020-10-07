@@ -31,7 +31,7 @@ end fifo_merge2_full;
 
 architecture Behavioral of fifo_merge2_full is
     signal q1, q2, out_i : particle;
-    signal q1_valid, q2_valid, valid_out_i : std_logic := '0';
+    signal q1_valid, q2_valid, valid_out_i, roll_out_i : std_logic := '0';
     signal full1_i, full2_i   : std_logic := '0';
 begin
 
@@ -46,14 +46,14 @@ begin
                         out_i <= d2_in;
                     end if;
                     valid_out_i <= d1_valid or d2_valid;
-                    roll_out  <= '1';
+                    roll_out_i  <= '1';
                     q1       <= d1_in; 
                     q1_valid <= '0';
                     q2       <= d2_in; 
                     q2_valid <= d1_valid and d2_valid;
                     full1_i <= '0';
                     full2_i <= d1_valid and d2_valid;
-                elsif full = '1' and valid_out_i = '1' then
+                elsif roll_out_i = '0' and full = '1' and valid_out_i = '1' then
                     if full1_i = '0' then
                         q1       <= d1_in;
                         q1_valid <= d1_valid;
@@ -64,6 +64,7 @@ begin
                         q2_valid <= d2_valid;
                         full2_i  <= d2_valid;
                     end if;
+                    roll_out_i <= '0';
                 else
                     load2 := (d1_valid or q1_valid or q2_valid) and not (full2_i);
                     if q1_valid = '1' then
@@ -77,7 +78,7 @@ begin
                     end if;
  
                     valid_out_i <= d1_valid or d2_valid or q1_valid or q2_valid;
-                    roll_out <= '0';
+                    roll_out_i <= '0';
                     full1_i <= '0';
                     full2_i <= d1_valid and (d2_valid or q1_valid or q2_valid);
                     if load2 = '1' then
@@ -96,6 +97,7 @@ begin
         full2 <= full2_i;
         d_out <= out_i;
         valid_out <= valid_out_i;
+        roll_out <= roll_out_i;
 
         dbg_w64(13 downto 0) <= std_logic_vector(q2.pt);
         dbg_w64(14) <= q2_valid;
