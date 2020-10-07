@@ -252,7 +252,7 @@ begin
             end loop;
             writeline(Fd, Lo);
             frame := frame + 1;
-            if frame >= 50 then finish(0); end if;
+            --if frame >= 50 then finish(0); end if;
         end loop;
         wait for 50 ns;
         finish(0);

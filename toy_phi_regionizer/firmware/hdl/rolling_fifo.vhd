@@ -168,7 +168,7 @@ begin
                 roll_delay(0) <= roll;
                 roll_delay(2 downto 1) <= roll_delay(1 downto 0);
 
-                full_and_valid_out := roll_delay(1) = '0' and full = '1' and ((use_cache = '1' and cache_valid = '1') or (use_cache = '0' and mem_out_valid = '1'));
+                full_and_valid_out := roll_delay(1) = '0' and roll_delay(2) = '0' and full = '1' and ((use_cache = '1' and cache_valid = '1') or (use_cache = '0' and mem_out_valid = '1'));
 
                 if roll_delay(0) = '1' then
                     rptr_next := to_unsigned(1, wptr'length);
