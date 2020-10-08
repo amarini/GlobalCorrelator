@@ -39,7 +39,7 @@ architecture rtl of emp_payload is
         constant NSECTORS : natural := 3;
         constant NFIBERS : natural := 2;
         constant NFIFOS : natural := 6;
-        constant NREGIONS : natural := NSECTORS;
+        constant NREGIONS : natural := NSECTORS*(NFIFOS/2);
 
         type pt_vect     is array(natural range <>) of std_logic_vector(13 downto 0);
         type etaphi_vect is array(natural range <>) of std_logic_vector(11 downto 0);
@@ -63,7 +63,7 @@ begin
 	ipb_out <= IPB_RBUS_NULL;
 
 
-    uut : entity work.regionizer
+    uut : entity work.regionizer_m2
         port map(ap_clk => clk_p, 
                  ap_rst => rst_loc(0), 
                  ap_start => '1',
@@ -106,6 +106,30 @@ begin
                  tracks_out_2_eta_V => eta_out(2),
                  tracks_out_2_phi_V => phi_out(2),
                  tracks_out_2_rest_V => rest_out(2),
+                 tracks_out_3_pt_V => pt_out(3),
+                 tracks_out_3_eta_V => eta_out(3),
+                 tracks_out_3_phi_V => phi_out(3),
+                 tracks_out_3_rest_V => rest_out(3),
+                 tracks_out_4_pt_V => pt_out(4),
+                 tracks_out_4_eta_V => eta_out(4),
+                 tracks_out_4_phi_V => phi_out(4),
+                 tracks_out_4_rest_V => rest_out(4),
+                 tracks_out_5_pt_V => pt_out(5),
+                 tracks_out_5_eta_V => eta_out(5),
+                 tracks_out_5_phi_V => phi_out(5),
+                 tracks_out_5_rest_V => rest_out(5),
+                 tracks_out_6_pt_V => pt_out(6),
+                 tracks_out_6_eta_V => eta_out(6),
+                 tracks_out_6_phi_V => phi_out(6),
+                 tracks_out_6_rest_V => rest_out(6),
+                 tracks_out_7_pt_V => pt_out(7),
+                 tracks_out_7_eta_V => eta_out(7),
+                 tracks_out_7_phi_V => phi_out(7),
+                 tracks_out_7_rest_V => rest_out(7),
+                 tracks_out_8_pt_V => pt_out(8),
+                 tracks_out_8_eta_V => eta_out(8),
+                 tracks_out_8_phi_V => phi_out(8),
+                 tracks_out_8_rest_V => rest_out(8),
                  newevent => newevent,
                  newevent_out => newevent_out
              );

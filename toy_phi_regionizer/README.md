@@ -21,11 +21,11 @@ There is one additional boolean input that is set to true in the first clock cyc
  * "merge 2" mode:
    * working reference c++ implementation in the HLS testbench
    * HLS implementation doesn't work (requires II=2), and doesn't even pass c-simulation
-   * VHDL native implementation passes standalone behavioural simulation in VHDL and meets timing 
+   * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
  * "full merge" mode:
    * working reference c++ implementation in the HLS testbench
    * HLS implementation doesn't work (didn't even try), and doesn't even pass c-simulation
-   * VHDL native implementation passes standalone behavioural simulation in VHDL
+   * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
 
 ## Running
 
