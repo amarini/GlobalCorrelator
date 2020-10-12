@@ -36,7 +36,7 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 
 
 
-#define REGIONIZER_SMALL
+//#define REGIONIZER_SMALL
 //#define ROUTER_NOMERGE
 //#define ROUTER_M2
 
@@ -46,25 +46,30 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 #define NSECTORS 9
 #endif
 #define NFIBERS  2
+#define NFIFOS   6
+#define NSORTED  28
+#define PFLOWII  4
+#define NPFSTREAMS ((NSORTED+PFLOWII-1)/PFLOWII)
+#define NREGIONS NSECTORS
 
-#ifdef ROUTER_NOMERGE
-    #define NFIFOS   6
-    #define NREGIONS NSECTORS*NFIFOS
+#ifdef ROUTER_MUX
+    #define NOUTLINKS NPFSTREAMS
+#elif defined(ROUTER_NOMERGE)
+    #define NOUTLINKS NSECTORS*NFIFOS
     #define ALGO_LATENCY 2
 #elif defined(ROUTER_M2)
-    #define NFIFOS   6
-    #define NREGIONS NSECTORS*(NFIFOS/2)
-    #define ALGO_LATENCY 2
+    #define NOUTLINKS NSECTORS*(NFIFOS/2)
+    #define ALGO_LATENCY 3
 #else
-    #define NREGIONS NSECTORS
-    #define NFIFOS   6
+    #define NOUTLINKS NSECTORS
     #define ALGO_LATENCY 3
 #endif
+
 #define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
-void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out);
-void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out);
+void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
+void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
 
 void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out);
 
@@ -85,7 +90,7 @@ inline void printTrackShort(FILE *f, const Track & t) {
     else if (t.phi <-100) shortphi = -2;
     else if (t.phi <   0) shortphi = -1;
     //fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
-    fprintf(f,"%3d.%02d ", t.pt.to_int(), t.rest.to_int());
+    fprintf(f,"%3d.%04d ", t.pt.to_int(), t.rest.to_int());
 }
 #endif
 

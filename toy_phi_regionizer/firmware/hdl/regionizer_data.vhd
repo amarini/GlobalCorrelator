@@ -11,7 +11,7 @@ package regionizer_data is
     end record;
     type particles   is array(natural range <>) of particle;
 
-    constant NSECTORS : natural := 3;
+    constant NSECTORS : natural := 9;
     constant NFIBERS : natural := 2;
     constant NFIFOS : natural := NFIBERS*3;
 end package;

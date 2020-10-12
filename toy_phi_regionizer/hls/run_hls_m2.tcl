@@ -15,7 +15,7 @@ create_clock -period 2.5
 
 
 csim_design
-#csynth_design
-#cosim_design -trace_level all
+csynth_design
+cosim_design -trace_level all
 #export_design -format ip_catalog -vendor "cern-cms" -version ${hlsIPVersion} -description ${hlsTopFunc}
 exit

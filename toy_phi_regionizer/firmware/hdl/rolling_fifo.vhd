@@ -18,7 +18,7 @@ entity rolling_fifo is
         valid_out : out std_logic;
         full      : in std_logic;
     -- debug
-        dbg_w64         : out std_logic_vector(63 downto 0);
+        --dbg_w64         : out std_logic_vector(63 downto 0);
     -- end debug
         roll      : in  std_logic;
         roll_out  : out std_logic
@@ -101,12 +101,6 @@ begin
      waddr(11 downto 6) <= std_logic_vector(wptr);
      raddr(5 downto 0) <= (others => '0');
      waddr(5 downto 0) <= (others => '0');
-
-     --d_out.pt   <= cache.pt   when use_cache = '1' else unsigned(q64(63 downto 50));
-     --d_out.eta  <= cache.eta  when use_cache = '1' else   signed(q64(49 downto 38));
-     --d_out.phi  <= cache.phi  when use_cache = '1' else   signed(q64(37 downto 26));
-     --d_out.rest <= cache.rest when use_cache = '1' else unsigned(q64(25 downto  0));
-     --valid_out  <= cache_valid when use_cache = '1' else mem_out_valid;
 
      out_switch: process(cache,q64,use_cache)
      begin
@@ -209,12 +203,12 @@ begin
         end process;
 
 
-        dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, 4 => wren, others => '0');
-        dbg_w64(21 downto 16) <= std_logic_vector(rptr);
-        dbg_w64(31 downto 22) <= (others => '0');
-        dbg_w64(37 downto 32) <= std_logic_vector(wptr);
-        dbg_w64(47 downto 38) <= (others => '0');
-        dbg_w64(61 downto 48) <= std_logic_vector(cache.pt);
-        dbg_w64(63 downto 62) <= (others => '0');
+       --dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, 4 => wren, others => '0');
+       --dbg_w64(21 downto 16) <= std_logic_vector(rptr);
+       --dbg_w64(31 downto 22) <= (others => '0');
+       --dbg_w64(37 downto 32) <= std_logic_vector(wptr);
+       --dbg_w64(47 downto 38) <= (others => '0');
+       --dbg_w64(61 downto 48) <= std_logic_vector(cache.pt);
+       --dbg_w64(63 downto 62) <= (others => '0');
     
 end Behavioral;

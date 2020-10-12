@@ -7,9 +7,9 @@ use unisim.vcomponents.all;
 use work.regionizer_data.all;
 
 entity fifo_merge2_full is
-    generic(
-        FIFO_INDEX : natural := 0
-    );
+    --generic(
+    --    FIFO_INDEX : natural := 0
+    --);
     port(
         ap_clk   : in std_logic;
         d1_in    : in particle;
@@ -23,7 +23,7 @@ entity fifo_merge2_full is
         full1      : out std_logic;
         full2      : out std_logic;
         -- begin debug
-        dbg_w64    : out std_logic_vector(63 downto 0);
+        --dbg_w64    : out std_logic_vector(63 downto 0);
         -- end debug
         roll_out   : out std_logic
     );
@@ -99,10 +99,10 @@ begin
         valid_out <= valid_out_i;
         roll_out <= roll_out_i;
 
-        dbg_w64(13 downto 0) <= std_logic_vector(q2.pt);
-        dbg_w64(14) <= q2_valid;
-        dbg_w64(28 downto 15) <= std_logic_vector(q1.pt);
-        dbg_w64(29) <= q1_valid;
-        dbg_w64(63 downto 30) <= (others => '0');
+        --dbg_w64(13 downto 0) <= std_logic_vector(q2.pt);
+        --dbg_w64(14) <= q2_valid;
+        --dbg_w64(28 downto 15) <= std_logic_vector(q1.pt);
+        --dbg_w64(29) <= q1_valid;
+        --dbg_w64(63 downto 30) <= (others => '0');
 
 end Behavioral;

@@ -6,15 +6,10 @@ class rolling_ram_fifo {
         void update(
                 bool roll,        
                 const Track & din,
+                bool write,
                 Track & dout,   
                 bool & valid,
-                bool wasread,    
-                bool &roll_out
-        );
-        void update_stream(
-                bool roll,        
-                const Track & din,
-                hls::stream<Track> & dout,
+                bool full,    
                 bool &roll_out
         );
 
@@ -24,70 +19,148 @@ class rolling_ram_fifo {
         ptr_t wr_ptr;  // where we have last read the data
         ptr_t rd_ptr;  // where we have read the data
         ap_uint<64> data[64];
+        ap_uint<64> cache;
+        bool        cache_valid;
 };
 
 
 rolling_ram_fifo::rolling_ram_fifo() {
-    rd_ptr = 0;
-    wr_ptr = 0;
+    rd_ptr = 2;
+    wr_ptr = 1;
     roll_delayed = 0;
+    cache_valid  = 0;
 }
 
 
 void rolling_ram_fifo::update(bool roll,     
-                                 const Track & din, 
-                                 Track & dout, bool & valid, bool wasread, bool &roll_out) 
+                                 const Track & din, bool write,
+                                 Track & dout, bool & valid, bool full, bool &roll_out) 
 {
     #pragma HLS DEPENDENCE variable=data inter false
     #pragma HLS inline
-    // implement read port
-    valid  = (roll_delayed ? (wr_ptr == 1) :                              // better to code it here than after updating rd_ptr
-                 wasread   ? ((rd_ptr+1) < wr_ptr) : (rd_ptr < wr_ptr));  // otherwise HLS serializes the two and doesn't meet timing
-    rd_ptr = (roll_delayed ? ptr_t(0) : 
-                 wasread   ? ptr_t(rd_ptr+1) : rd_ptr);
-    dout = unpackTrack(data[rd_ptr]);
+
+#ifndef __SYNTHESIS__
+    //printf("\nupdate with (%1d, pt %3d), roll %d, full %d, wr_ptr %3d rd_ptr %3d last output (%1d, pt %3d)",
+    //            int(write), din.pt.to_int(), int(roll), int(full), 
+    //            wr_ptr.to_int(), rd_ptr.to_int(),int(cache_valid), unpackTrack(cache).pt.to_int());
+#endif
+    // implement RAM read
+    ap_uint<64> mem_out = data[rd_ptr]; 
+    bool mem_out_valid = (rd_ptr < wr_ptr);
+
+    bool full_and_valid_out = full && cache_valid && !roll_delayed;
+    if (full_and_valid_out) {
+        dout = unpackTrack(cache); 
+        valid = cache_valid;
+    } else {
+        cache = mem_out;
+        cache_valid = mem_out_valid;
+        dout = unpackTrack(mem_out);
+        valid = mem_out_valid;
+    }
+    roll_out = roll_delayed;
+
+    if (roll) {
+        rd_ptr = 1;
+    } else if (not(full_and_valid_out) && mem_out_valid) {
+        rd_ptr++;
+    }
 
     // implement write port
-    if (roll) wr_ptr = 0;
-    if (din.pt != 0) {
+    if (roll) wr_ptr = 1;
+    if (write) {
         data[wr_ptr] = packTrack(din);
         wr_ptr++;
     }
-    roll_out = roll_delayed;
+
+#ifndef __SYNTHESIS__
+    //printf(" -->  (%1d, pt %3d), wr_ptr %3d rd_ptr %3d, cache (%1d, pt %3d)\n",
+    //            int(valid), dout.pt.to_int(), wr_ptr.to_int(), rd_ptr.to_int(),int(cache_valid), unpackTrack(cache).pt.to_int());
+#endif
+
     roll_delayed = roll;
 }
 
-void rolling_ram_fifo::update_stream(bool roll,     
-                                 const Track & din, 
-                                 hls::stream<Track> & dout, bool &roll_out) 
+class fifo_merge2 {
+    public:    
+        fifo_merge2 () ;
+        void update(
+                bool roll,        
+                const Track & din1,
+                const Track & din2,
+                bool valid1, 
+                bool valid2,
+                Track & dout,   
+                bool  & valid,
+                bool &full1,    
+                bool &full2,    
+                bool &roll_out
+        );
+
+    private:
+        Track queue_;
+        bool  queue_valid_, full2_;
+};
+
+
+fifo_merge2::fifo_merge2() {
+    queue_valid_ = false; full2_ = false;
+}
+
+
+void fifo_merge2::update(bool roll,     
+                              const Track & din1,
+                              const Track & din2,
+                              bool valid1, 
+                              bool valid2,
+                              Track & dout,   
+                              bool  & valid,
+                              bool  & full1,    
+                              bool  & full2,    
+                              bool  & roll_out) 
 {
-    #pragma HLS DEPENDENCE variable=data inter false
-    // implement read port
-    if (roll_delayed) {
-        rd_ptr = 0;
+#ifndef __SYNTHESIS__
+   //printf("\nAsked to merge (%1d, pt %3d) and (%1d, pt %3d), roll %1d, queue (%1d, pt %3d), old full2 %1d: ",
+   //            int(valid1), din1.pt.to_int(),
+   //            int(valid2), din2.pt.to_int(), roll,
+   //            int(queue_valid_), queue_.pt.to_int(), int(full2_));
+#endif
+    #pragma HLS inline
+    if (roll) {
+        dout = (valid1 ? din1 : din2);
+        valid = valid1 || valid2;
+        queue_ = din2;
+        queue_valid_ = valid1 && valid2;
+        full2_ = valid1 && valid2;
     } else {
-        if (dout.empty() && (rd_ptr < wr_ptr)) {
-            dout.write(unpackTrack(data[rd_ptr]));
-            rd_ptr++;
+        bool load2 = (valid1 || queue_valid_) and not full2_;
+        dout = (valid1 ? din1 : (queue_valid_ ? queue_ : din2));
+        valid = valid1 || valid2 || queue_valid_;
+        full2_ = valid1 && (valid2 || queue_valid_);
+        if (load2) {
+            queue_ = din2;
+            queue_valid_ = valid2;
+        } else {
+            queue_valid_ = valid1 and queue_valid_;
         }
     }
-
-    // implement write port
-    if (roll) wr_ptr = 0;
-    if (din.pt != 0) {
-        data[wr_ptr] = packTrack(din);
-        wr_ptr++;
-    }
-    roll_out = roll_delayed;
-    roll_delayed = roll;
+    roll_out = roll;
+    full1 = false;
+    full2 = full2_;
+#ifndef __SYNTHESIS__
+    //printf(" --> (%1d, pt %3d) full2 %1d\n", int(valid), dout.pt.to_int(), int(full2));
+#endif
 }
 
 
-void route_link2fifo(const Track & in, Track & center, Track & after, Track & before) {
+
+
+void route_link2fifo(const Track & in, Track & center, bool & write_center, Track & after, bool & write_after, Track & before, bool & write_before) {
     #pragma HSL inline
-    center = in;
-    if (in.phi > 0) { after  = in; after.phi  -= PHI_SHIFT; } else { clear(after); }
-    if (in.phi < 0) { before = in; before.phi += PHI_SHIFT; } else { clear(before); }
+    bool valid = (in.pt != 0);
+    write_center = valid;                 center = in; 
+    write_after  = valid && (in.phi > 0);  after = in; after.phi  -= PHI_SHIFT; 
+    write_before = valid && (in.phi < 0); before = in; before.phi += PHI_SHIFT;
 }
 
 void reduce_2(
@@ -131,37 +204,38 @@ void reduce_3(
     else             { clear(out);  wasread1 = 0; wasread2 = 0; wasread3 = 0; }
 }
 
-void route_all_sectors(const Track tracks_in[NSECTORS][NFIBERS], Track fifo_in[NSECTORS][NFIFOS]) {
+void route_all_sectors(const Track tracks_in[NSECTORS][NFIBERS], Track fifo_in[NSECTORS][NFIFOS], bool fifo_write[NSECTORS][NFIFOS]) {
     #pragma HLS inline
     #pragma HLS array_partition variable=tracks_in  complete dim=0
     #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
 
 #if NSECTORS == 9
-    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[8][4]);
-    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[8][5]);
-    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
-    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_in[2][3], fifo_in[0][5]);
-    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_in[3][2], fifo_in[1][4]);
-    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_in[3][3], fifo_in[1][5]);
-    route_link2fifo(tracks_in[3][0], fifo_in[3][0], fifo_in[4][2], fifo_in[2][4]);
-    route_link2fifo(tracks_in[3][1], fifo_in[3][1], fifo_in[4][3], fifo_in[2][5]);
-    route_link2fifo(tracks_in[4][0], fifo_in[4][0], fifo_in[5][2], fifo_in[3][4]);
-    route_link2fifo(tracks_in[4][1], fifo_in[4][1], fifo_in[5][3], fifo_in[3][5]);
-    route_link2fifo(tracks_in[5][0], fifo_in[5][0], fifo_in[6][2], fifo_in[4][4]);
-    route_link2fifo(tracks_in[5][1], fifo_in[5][1], fifo_in[6][3], fifo_in[4][5]);
-    route_link2fifo(tracks_in[6][0], fifo_in[6][0], fifo_in[7][2], fifo_in[5][4]);
-    route_link2fifo(tracks_in[6][1], fifo_in[6][1], fifo_in[7][3], fifo_in[5][5]);
-    route_link2fifo(tracks_in[7][0], fifo_in[7][0], fifo_in[8][2], fifo_in[6][4]);
-    route_link2fifo(tracks_in[7][1], fifo_in[7][1], fifo_in[8][3], fifo_in[6][5]);
-    route_link2fifo(tracks_in[8][0], fifo_in[8][0], fifo_in[0][2], fifo_in[7][4]);
-    route_link2fifo(tracks_in[8][1], fifo_in[8][1], fifo_in[0][3], fifo_in[7][5]);
+    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_write[0][0], fifo_in[1][2], fifo_write[1][2], fifo_in[8][4], fifo_write[8][4]);
+    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_write[0][1], fifo_in[1][3], fifo_write[1][3], fifo_in[8][5], fifo_write[8][5]);
+    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_write[1][0], fifo_in[2][2], fifo_write[2][2], fifo_in[0][4], fifo_write[0][4]);
+    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_write[1][1], fifo_in[2][3], fifo_write[2][3], fifo_in[0][5], fifo_write[0][5]);
+    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_write[2][0], fifo_in[3][2], fifo_write[3][2], fifo_in[1][4], fifo_write[1][4]);
+    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_write[2][1], fifo_in[3][3], fifo_write[3][3], fifo_in[1][5], fifo_write[1][5]);
+    route_link2fifo(tracks_in[3][0], fifo_in[3][0], fifo_write[3][0], fifo_in[4][2], fifo_write[4][2], fifo_in[2][4], fifo_write[2][4]);
+    route_link2fifo(tracks_in[3][1], fifo_in[3][1], fifo_write[3][1], fifo_in[4][3], fifo_write[4][3], fifo_in[2][5], fifo_write[2][5]);
+    route_link2fifo(tracks_in[4][0], fifo_in[4][0], fifo_write[4][0], fifo_in[5][2], fifo_write[5][2], fifo_in[3][4], fifo_write[3][4]);
+    route_link2fifo(tracks_in[4][1], fifo_in[4][1], fifo_write[4][1], fifo_in[5][3], fifo_write[5][3], fifo_in[3][5], fifo_write[3][5]);
+    route_link2fifo(tracks_in[5][0], fifo_in[5][0], fifo_write[5][0], fifo_in[6][2], fifo_write[6][2], fifo_in[4][4], fifo_write[4][4]);
+    route_link2fifo(tracks_in[5][1], fifo_in[5][1], fifo_write[5][1], fifo_in[6][3], fifo_write[6][3], fifo_in[4][5], fifo_write[4][5]);
+    route_link2fifo(tracks_in[6][0], fifo_in[6][0], fifo_write[6][0], fifo_in[7][2], fifo_write[7][2], fifo_in[5][4], fifo_write[5][4]);
+    route_link2fifo(tracks_in[6][1], fifo_in[6][1], fifo_write[6][1], fifo_in[7][3], fifo_write[7][3], fifo_in[5][5], fifo_write[5][5]);
+    route_link2fifo(tracks_in[7][0], fifo_in[7][0], fifo_write[7][0], fifo_in[8][2], fifo_write[8][2], fifo_in[6][4], fifo_write[6][4]);
+    route_link2fifo(tracks_in[7][1], fifo_in[7][1], fifo_write[7][1], fifo_in[8][3], fifo_write[8][3], fifo_in[6][5], fifo_write[6][5]);
+    route_link2fifo(tracks_in[8][0], fifo_in[8][0], fifo_write[8][0], fifo_in[0][2], fifo_write[0][2], fifo_in[7][4], fifo_write[7][4]);
+    route_link2fifo(tracks_in[8][1], fifo_in[8][1], fifo_write[8][1], fifo_in[0][3], fifo_write[0][3], fifo_in[7][5], fifo_write[7][5]);
 #elif NSECTORS == 3
-    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[2][4]);
-    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[2][5]);
-    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
-    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_in[2][3], fifo_in[0][5]);
-    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_in[0][2], fifo_in[1][4]);
-    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_in[0][3], fifo_in[1][5]);
+    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_write[0][0], fifo_in[1][2], fifo_write[1][2], fifo_in[2][4], fifo_write[2][4]);
+    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_write[0][1], fifo_in[1][3], fifo_write[1][3], fifo_in[2][5], fifo_write[2][5]);
+    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_write[1][0], fifo_in[2][2], fifo_write[2][2], fifo_in[0][4], fifo_write[0][4]);
+    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_write[1][1], fifo_in[2][3], fifo_write[2][3], fifo_in[0][5], fifo_write[0][5]);
+    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_write[2][0], fifo_in[0][2], fifo_write[0][2], fifo_in[1][4], fifo_write[1][4]);
+    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_write[2][1], fifo_in[0][3], fifo_write[0][3], fifo_in[1][5], fifo_write[1][5]);
 #else
     #error "Unsupported number of sectors"
 #endif
@@ -174,13 +248,13 @@ void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
     #pragma HLS array_partition variable=tracks_in  complete dim=0
     #pragma HLS array_partition variable=tracks_out complete
 
-    Track fifo_in[NSECTORS][NFIFOS];
+    Track fifo_in[NSECTORS][NFIFOS]; bool fifo_write[NSECTORS][NFIFOS];
     static Track fifo_out[NSECTORS][NFIFOS];
-    static bool valid_out[NSECTORS][NFIFOS], was_read[NSECTORS][NFIFOS];
+    static bool valid_out[NSECTORS][NFIFOS];
     #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
     #pragma HLS array_partition variable=fifo_out complete dim=0
     #pragma HLS array_partition variable=valid_out complete dim=0
-    #pragma HLS array_partition variable=was_read  complete dim=0
 
     static bool roll_out[NSECTORS][NFIFOS];
     #pragma HLS array_partition variable=roll_out complete dim=0
@@ -188,7 +262,7 @@ void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
     static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
     #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
 
-    route_all_sectors(tracks_in, fifo_in);
+    route_all_sectors(tracks_in, fifo_in, fifo_write);
 
     newevent_out = roll_out[0][0];
 
@@ -201,7 +275,6 @@ void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
             } else {
                 clear(tracks_out[i*NFIFOS+j]);
             }
-            was_read[i][j] = valid_out[i][j];
         }
     }
 
@@ -209,36 +282,41 @@ void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Tra
         #pragma HLS unroll
         for (int j = 0; j < NFIFOS; ++j) {
             #pragma HLS unroll
-            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j], roll_out[i][j]);
+            //if (i == 0) printf("\non fifo[%d][%d] write %d, pt %4d\n", i, j, int(fifo_write[i][j]) , fifo_in[i][j].pt.to_int());
+            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_write[i][j], fifo_out[i][j], valid_out[i][j], false, roll_out[i][j]);
+            //if (i == 0) printf("\non fifo[%d][%d] out valid %d, pt %4d\n", i, j, int(valid_out[i][j]) , fifo_out[i][j].pt.to_int());
         }
     }
 }
 
-void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out)
+void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out)
 {
     #pragma HLS pipeline II=1 enable_flush
     #pragma HLS array_partition variable=tracks_in  complete dim=0
     #pragma HLS array_partition variable=tracks_out complete
 
-    Track fifo_in[NSECTORS][NFIFOS];
+    Track fifo_in[NSECTORS][NFIFOS]; bool fifo_write[NSECTORS][NFIFOS];
     static Track fifo_out[NSECTORS][NFIFOS], merged_out[NSECTORS][NFIFOS/2];
-    static bool valid_out[NSECTORS][NFIFOS], was_read[NSECTORS][NFIFOS], valid_merge[NSECTORS][NFIFOS/2];
+    static bool valid_out[NSECTORS][NFIFOS], fifo_full[NSECTORS][NFIFOS], valid_merge[NSECTORS][NFIFOS/2];
     #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
+    #pragma HLS array_partition variable=fifo_full  complete dim=0
     #pragma HLS array_partition variable=fifo_out complete dim=0
-    #pragma HLS array_partition variable=mergedout complete dim=0
+    #pragma HLS array_partition variable=merged_out complete dim=0
     #pragma HLS array_partition variable=valid_out complete dim=0
-    #pragma HLS array_partition variable=was_read  complete dim=0
+    #pragma HLS array_partition variable=valid_merge  complete dim=0
 
-    static bool roll_out[NSECTORS][NFIFOS], premerge_roll;
+    static bool roll_out[NSECTORS][NFIFOS], merged_roll_out[NSECTORS][NFIFOS/2];
     #pragma HLS array_partition variable=roll_out complete dim=0
 
     static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
     #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
+    static fifo_merge2 merger[NSECTORS*NFIFOS/2];
+    #pragma HLS array_partition variable=mergers complete dim=1 
 
-    route_all_sectors(tracks_in, fifo_in);
+    route_all_sectors(tracks_in, fifo_in, fifo_write);
 
-    newevent_out = premerge_roll;
-    premerge_roll = roll_out[0][0];
+    newevent_out = merged_roll_out[0][0];
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
@@ -257,22 +335,13 @@ void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tr
         #pragma HLS unroll
         for (int j = 0; j < NFIFOS/2; ++j) {
             #pragma HLS unroll
-            if (valid_out[i][2*j]) {
-                merged_out[i][j]  = fifo_out[i][2*j];
-                valid_merge[i][j] = true;
-                was_read[i][2*j+0] = 1;
-                was_read[i][2*j+1] = 0;
-            /*} else if (valid_out[i][2*j+1]) {
-                merged_out[i][j]  = fifo_out[i][2*j+1];
-                valid_merge[i][j] = true;
-                was_read[i][2*j+0] = 0;
-                was_read[i][2*j+1] = 1;*/
-            } else {
-                clear(merged_out[i][j]);
-                valid_merge[i][j] = false;
-                was_read[i][2*j+0] = 0;
-                was_read[i][2*j+1] = 0;
-            }
+            merger[i*(NFIFOS/2)+j].update(roll_out[i][2*j],
+                                          fifo_out[i][2*j], fifo_out[i][2*j+1], 
+                                          valid_out[i][2*j], valid_out[i][2*j+1], 
+                                          merged_out[i][j], 
+                                          valid_merge[i][j],
+                                          fifo_full[i][2*j], fifo_full[i][2*j+1], 
+                                          merged_roll_out[i][j]);
         }
     }
 
@@ -280,93 +349,21 @@ void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tr
         #pragma HLS unroll
         for (int j = 0; j < NFIFOS; ++j) {
             #pragma HLS unroll
-            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j], roll_out[i][j]);
+            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_write[i][j], fifo_out[i][j], valid_out[i][j], fifo_full[i][j], roll_out[i][j]);
         }
     }
 }
-
-#if 0
-void merge_stream(hls::stream<Track> &in1, hls::stream<Track> &in2, hls::stream<Track> &out, bool roll, bool & roll_out) {
-    if (roll) {
-        if (!in1.empty()) in1.read(); // discard whatever was there
-        if (!in2.empty()) in2.read();   
-    } else {
-        if (!in1.empty()) {
-            out.write(in1.read());
-        } else if (!in2.empty()) {
-            out.write(in2.read());
-        } 
-    }
-    roll_out = roll;
-}
-void read_or_null(hls::stream<Track> &in, bool roll, Track & out) {
-    Track ret;
-    if (roll || !in.read_nb(ret)) {
-        clear(ret); 
-    }
-    out = ret;
-}
-
-void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS], bool & newevent_out)
-{
-    #pragma HLS pipeline II=1 enable_flush
-    #pragma HLS array_partition variable=tracks_in  complete dim=0
-    #pragma HLS array_partition variable=tracks_out complete
-
-    Track fifo_in[NSECTORS][NFIFOS];
-    static hls::stream<Track> fifo_out[NSECTORS][NFIFOS], merged_out[NSECTORS][NFIFOS/2];
-    static bool roll_out[NSECTORS][NFIFOS], merge_roll[NSECTORS][NFIFOS/2], out_delay;
-    #pragma HLS array_partition variable=fifo_in  complete dim=0
-    #pragma HLS array_partition variable=fifo_out complete dim=0
-    #pragma HLS array_partition variable=merged_out complete dim=0
-    #pragma HLS array_partition variable=roll_out complete dim=0
-    #pragma HLS array_partition variable=merge_roll complete dim=0
-    #pragma HLS stream variable=fifo_out depth=1
-    #pragma HLS stream variable=merged_out depth=1
-
-    static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
-    #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
-
-    route_all_sectors(tracks_in, fifo_in);
-
-    for (int i = 0; i < NSECTORS; ++i) {
-        #pragma HLS unroll
-        for (int j = 0; j < NFIFOS; ++j) {
-            #pragma HLS unroll
-            fifos[i*NFIFOS+j].update_stream(newevent, fifo_in[i][j], fifo_out[i][j], roll_out[i][j]);
-        }
-    }
-
-    for (int i = 0; i < NSECTORS; ++i) {
-        #pragma HLS unroll
-        for (int j = 0; j < NFIFOS/2; ++j) {
-            #pragma HLS unroll
-            merge_stream(fifo_out[i][2*j], fifo_out[i][2*j+1], merged_out[i][j], roll_out[i][2*j], merge_roll[i][j]);
-        }
-    }
-
-    for (int i = 0; i < NSECTORS; ++i) {
-        #pragma HLS unroll
-        for (int j = 0; j < NFIFOS/2; ++j) {
-            #pragma HLS unroll
-            read_or_null(merged_out[i][j], merge_roll[i][j], tracks_out[i*(NFIFOS/2)+j]);
-        }
-    }
-
-    newevent_out = merge_roll[0][0];
-
-}
-#endif
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {
+#if 0
     #pragma HLS pipeline II=1 enable_flush
     #pragma HLS array_partition variable=tracks_in  complete dim=0
     #pragma HLS array_partition variable=tracks_out complete
 
     Track fifo_in[NSECTORS][NFIFOS];
     static Track fifo_out[NSECTORS][NFIFOS];
-    static bool valid_out[NSECTORS][NFIFOS], was_read[NSECTORS][NFIFOS];
+    static bool valid_out[NSECTORS][NFIFOS], full[NSECTORS][NFIFOS];
     #pragma HLS array_partition variable=fifo_in  complete dim=0
     #pragma HLS array_partition variable=fifo_out complete dim=0
     #pragma HLS array_partition variable=valid_out complete dim=0
@@ -386,35 +383,7 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
     #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
 
 
-#if NSECTORS == 9
-    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[8][4]);
-    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[8][5]);
-    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
-    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_in[2][3], fifo_in[0][5]);
-    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_in[3][2], fifo_in[1][4]);
-    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_in[3][3], fifo_in[1][5]);
-    route_link2fifo(tracks_in[3][0], fifo_in[3][0], fifo_in[4][2], fifo_in[2][4]);
-    route_link2fifo(tracks_in[3][1], fifo_in[3][1], fifo_in[4][3], fifo_in[2][5]);
-    route_link2fifo(tracks_in[4][0], fifo_in[4][0], fifo_in[5][2], fifo_in[3][4]);
-    route_link2fifo(tracks_in[4][1], fifo_in[4][1], fifo_in[5][3], fifo_in[3][5]);
-    route_link2fifo(tracks_in[5][0], fifo_in[5][0], fifo_in[6][2], fifo_in[4][4]);
-    route_link2fifo(tracks_in[5][1], fifo_in[5][1], fifo_in[6][3], fifo_in[4][5]);
-    route_link2fifo(tracks_in[6][0], fifo_in[6][0], fifo_in[7][2], fifo_in[5][4]);
-    route_link2fifo(tracks_in[6][1], fifo_in[6][1], fifo_in[7][3], fifo_in[5][5]);
-    route_link2fifo(tracks_in[7][0], fifo_in[7][0], fifo_in[8][2], fifo_in[6][4]);
-    route_link2fifo(tracks_in[7][1], fifo_in[7][1], fifo_in[8][3], fifo_in[6][5]);
-    route_link2fifo(tracks_in[8][0], fifo_in[8][0], fifo_in[0][2], fifo_in[7][4]);
-    route_link2fifo(tracks_in[8][1], fifo_in[8][1], fifo_in[0][3], fifo_in[7][5]);
-#elif NSECTORS == 3
-    route_link2fifo(tracks_in[0][0], fifo_in[0][0], fifo_in[1][2], fifo_in[2][4]);
-    route_link2fifo(tracks_in[0][1], fifo_in[0][1], fifo_in[1][3], fifo_in[2][5]);
-    route_link2fifo(tracks_in[1][0], fifo_in[1][0], fifo_in[2][2], fifo_in[0][4]);
-    route_link2fifo(tracks_in[1][1], fifo_in[1][1], fifo_in[2][3], fifo_in[0][5]);
-    route_link2fifo(tracks_in[2][0], fifo_in[2][0], fifo_in[0][2], fifo_in[1][4]);
-    route_link2fifo(tracks_in[2][1], fifo_in[2][1], fifo_in[0][3], fifo_in[1][5]);
-#else
-    #error "Unsupported number of sectors"
-#endif
+    route_all_sectors(tracks_in, fifo_in);
 
     for (int i = 0; i < NSECTORS; ++i) {
         #pragma HLS unroll
@@ -468,6 +437,7 @@ void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], 
             fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j], roll_out[i][j]);
         }
     }
+#endif
 }
 
 void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out) 

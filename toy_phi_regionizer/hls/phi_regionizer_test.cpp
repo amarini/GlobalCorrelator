@@ -5,14 +5,14 @@
 #include <list>
 #include <vector>
 
-//#ifdef REGIONIZER_SMALL
-//    #define NTEST 10
- //   #define TLEN  36
-//#else
+#ifdef REGIONIZER_SMALL
+    #define NTEST 10
+    #define TLEN  36
+#else
     #define NTEST 50
     #define TLEN  54
     //#define TLEN  10
-//#endif
+#endif
 
 Track shiftedTrack(const Track & t, int phi_shift) {
     Track ret = t;
@@ -54,16 +54,6 @@ struct RegionBuffer {
                 fifos[2*j+1].pop_back(); 
             }
         }
-    #if 0
-        // then from staging area to output
-        for (int j = 0; j < NFIFOS/2; ++j) {
-            if (staging_area[j].pt != 0) {
-                ret = staging_area[j];
-                clear(staging_area[j]);
-                break;
-            }
-        }
-    #else
         // then from staging area to output
         for (int j = 0; j < NFIFOS/2; ++j) {
             if (staging_area[j].pt != 0 && queue[j].pt == 0) {
@@ -78,7 +68,6 @@ struct RegionBuffer {
                 break;
             }
         }
-    #endif
         return ret;
     }
     void pop_all(Track out[]) {
@@ -106,8 +95,53 @@ struct RegionBuffer {
     }
 
 };
+struct RegionBuilder {
+    Track sortbuffer[NSORTED+1];
+    void push(bool newevt, const Track in, Track outsorted[NSORTED]) {
+        if (newevt) {
+            for (int i = 0; i <  NSORTED; ++i) outsorted[i] = sortbuffer[i];
+            for (int i = 0; i <= NSORTED; ++i) clear(sortbuffer[i]);
+        } else {
+            for (int i = NSORTED; i > 0; --i) sortbuffer[i] = sortbuffer[i-1];
+        }
+        sortbuffer[0] = in;
+        for (int i = 1; i <= NSORTED; ++i) {
+            if (sortbuffer[i].pt > sortbuffer[i-1].pt) std::swap(sortbuffer[i], sortbuffer[i-1]);
+        }
+    }
+};
+struct RegionMux {
+    Track buffer[NREGIONS][NSORTED];
+    int iter, ireg;
+    RegionMux() { iter = 0; ireg = -1; }
+    bool stream(bool newevt, Track stream_out[NPFSTREAMS]) {
+        if (newevt) { iter = 0; ireg = 0; }
+        if (ireg < NREGIONS) {
+            for (int i = 0; i < NPFSTREAMS; ++i) {
+                stream_out[i] = buffer[ireg][PFLOWII*i];
+            }
+            for (int i = 1; i < NSORTED; ++i) {
+                buffer[ireg][i-1] = buffer[ireg][i];
+            }
+            if (++iter == PFLOWII) {
+                ireg++; iter = 0;
+            }
+            return true;
+        } else {
+            for (int i = 0; i < NPFSTREAMS; ++i) {
+                clear(stream_out[i]);
+            }
+            return false;
+        }
+    }
+};
+
 struct Regionizer {
     RegionBuffer buffers[NREGIONS];
+    RegionBuilder builder[NREGIONS];
+    RegionMux bigmux;
+    unsigned int nevt;
+    Regionizer() { nevt = 0; }
     void flush() { 
         for (int i = 0; i < NREGIONS; ++i) buffers[i].flush();
     }
@@ -134,14 +168,26 @@ struct Regionizer {
 #endif
         }
     }
+    bool run(bool newevt, const Track in[NSECTORS][NFIBERS], Track out[NSORTED]) {
+        if (newevt) { flush(); nevt++; }
+        read_in(in);
+#ifdef ROUTER_MUX
+        Track routed[NREGIONS];
+        write_out(routed);
+        for (int i = 0; i < NREGIONS; ++i) {
+            builder[i].push(newevt, routed[i], &bigmux[i][0]);
+        }
+        return bigmux.stream(newevt && (nevt > 1), out);
+#else
+        write_out(out);
+        return true;
+#endif
+    }
 };
 
-void router_ref(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NREGIONS]) {
+bool router_ref(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS]) {
     static Regionizer impl;
-    if (newevent) impl.flush();
-    impl.read_in(tracks_in);
-    impl.write_out(tracks_out);
-
+    return impl.run(newevent, tracks_in, tracks_out);
 }
 
 
@@ -161,7 +207,7 @@ int main(int argc, char **argv) {
     bool ok = true;
     for (int itest = 0; itest < NTEST; ++itest) {
         std::vector<Track> inputs[NSECTORS][NFIBERS];
-        Track output[NREGIONS][TLEN], output_ref[NREGIONS][2*TLEN];
+        Track output[NOUTLINKS][TLEN], output_ref[NOUTLINKS][2*TLEN];
         for (int s = 0; s < NSECTORS; ++s) {
             int ntracks = abs(rand())%3 + (TLEN/6) + itest/(NTEST/5); // start with some random number of tracks
             if ((itest % 2 == 1) && ((abs(rand()) % (NSECTORS/2)) == 0)) {
@@ -197,54 +243,58 @@ int main(int argc, char **argv) {
             fprintf(fin, "\n");
             fprintf(fin_emp, "\n");
 
-            Track links_out[NREGIONS], links_ref[NREGIONS];
-            bool  newev_out, newev_ref = (i == 0);
+            Track links_out[NOUTLINKS], links_ref[NOUTLINKS];
+            bool good = true, newev_out, newev_ref = (i == 0);
+            bool ref_good = router_ref(i == 0, links_in, links_ref);
+
 #ifdef ROUTER_NOMERGE
             router_nomerge(i == 0, links_in, links_out, newev_out);
 #elif defined(ROUTER_M2)
             router_m2(i == 0, links_in, links_out, newev_out);
+#elif defined(ROUTER_MUX)
+            newev_out = 0;
+            for (int j = 0; j < NOUTLINKS; ++j) clear(links_out[j]); 
 #else
     #ifdef EMP_PACKED_64
-            ap_uint<64> links64_out[NREGIONS];
+            ap_uint<64> links64_out[NOUTLINKS];
             wrapped_router_monolythic(i == 0, links64_in, links64_out, newev_out);
-            for (int r = 0; r < NREGIONS; ++r) links_out[r] = unpackTrack(links64_out[r]);
+            for (int r = 0; r < NOUTLINKS; ++r) links_out[r] = unpackTrack(links64_out[r]);
     #else
             router_monolythic(i == 0, links_in, links_out, newev_out);
     #endif
 #endif
-            router_ref(i == 0, links_in, links_ref);
 
-            fprintf(fout, "%5d %1d   ", frame, int(newev_out));
-            fprintf(fref, "%5d %1d   ", frame, int(newev_ref));
-            fprintf(fref_emp, "Frame %04u : 1v%016llx", frame, uint64_t(newev_ref));
-            for (int r = 0; r < NREGIONS; ++r) printTrack(fout, links_out[r]);
-            for (int r = 0; r < NREGIONS; ++r) printTrack(fref, links_ref[r]);
-            for (int r = 0; r < NREGIONS; ++r) fprintf(fref_emp, " 1v%016llx", packTrack(links_ref[r]).to_uint64());
+            fprintf(fout, "%5d %1d %1d   ", frame, int(good), int(newev_out && good));
+            fprintf(fref, "%5d %1d %1d   ", frame, int(ref_good), int(ref_good && newev_ref));
+            fprintf(fref_emp, "Frame %04u : 1v%016llx", frame, uint64_t(1*newev_ref+2*ref_good));
+            for (int r = 0; r < NOUTLINKS; ++r) printTrack(fout, links_out[r]);
+            for (int r = 0; r < NOUTLINKS; ++r) printTrack(fref, links_ref[r]);
+            for (int r = 0; r < NOUTLINKS; ++r) fprintf(fref_emp, " 1v%016llx", packTrack(links_ref[r]).to_uint64());
             fprintf(fout, "\n");
             fprintf(fref, "\n");
             fprintf(fref_emp, "\n");
 
-            fprintf(stdout, " | %1d  ", int(newev_ref));
-            for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_ref[r]);
-            fprintf(stdout, " | %1d  ", int(newev_out));
-            for (int r = 0; r < NREGIONS; ++r) printTrackShort(stdout, links_out[r]);
+            fprintf(stdout, " | %1d %1d  ", int(ref_good), int(ref_good && newev_ref));
+            for (int r = 0; r < NOUTLINKS; ++r) printTrackShort(stdout, links_ref[r]);
+            fprintf(stdout, " | %1d %1d  ", int(good), int(newev_out && good));
+            for (int r = 0; r < NOUTLINKS; ++r) printTrackShort(stdout, links_out[r]);
             fprintf(stdout, "\n"); fflush(stdout);
 
-#ifndef ROUTER_NOMERGE
+#ifndef ROUTER_MUX
             continue;
 #endif
             // begin validation
             if (newev_ref) { 
                 pingpong = 1-pingpong;
-                for (int r = 0; r < NREGIONS; ++r) for (int k = 0; k < TLEN; ++k) clear(output_ref[r][TLEN*pingpong+k]);
+                for (int r = 0; r < NOUTLINKS; ++r) for (int k = 0; k < TLEN; ++k) clear(output_ref[r][TLEN*pingpong+k]);
             }
-            for (int r = 0; r < NREGIONS; ++r) { 
+            for (int r = 0; r < NOUTLINKS; ++r) { 
                 output_ref[r][TLEN*pingpong+i] = links_ref[r];
             }
             if (newev_out) {
                 if (i != latency) { printf("ERROR in latency\n"); ok = false; break; }
                 if (itest > 0) { 
-                    for (int r = 0; r < NREGIONS; ++r) {
+                    for (int r = 0; r < NOUTLINKS; ++r) {
                         for (int k = 0; k < TLEN; ++k) {
                             if (!(output[r][k] == output_ref[r][TLEN*(1-pingpong)+k]))   {
                                 printf("ERROR in region %d, object %d: expected ", r, k);
@@ -258,10 +308,10 @@ int main(int argc, char **argv) {
                     }
                     if (!ok) break; 
                 }
-                for (int r = 0; r < NREGIONS; ++r) for (int k = 0; k < TLEN; ++k) clear(output[r][k]);
+                for (int r = 0; r < NOUTLINKS; ++r) for (int k = 0; k < TLEN; ++k) clear(output[r][k]);
             }
             if (frame >= latency) {
-                for (int r = 0; r < NREGIONS; ++r) output[r][(frame-latency) % TLEN] = links_out[r];
+                for (int r = 0; r < NOUTLINKS; ++r) output[r][(frame-latency) % TLEN] = links_out[r];
             }
             // end validation
             

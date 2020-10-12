@@ -36,7 +36,7 @@ entity emp_payload is
 end emp_payload;
 
 architecture rtl of emp_payload is
-        constant NSECTORS : natural := 3;
+        constant NSECTORS : natural := 9;
         constant NFIBERS : natural := 2;
         constant NFIFOS : natural := 6;
         constant NREGIONS : natural := NSECTORS;
@@ -56,8 +56,8 @@ architecture rtl of emp_payload is
 
 
         constant N_OUT : natural := NREGIONS+1;
-        signal copy_in   : ldata(4 * N_REGION - 1 downto N_OUT);
-        signal copy_out  : ldata(4 * N_REGION - 1 downto N_OUT);
+        --signal copy_in   : ldata(4 * N_REGION - 1 downto N_OUT);
+        --signal copy_out  : ldata(4 * N_REGION - 1 downto N_OUT);
 begin
 
 	ipb_out <= IPB_RBUS_NULL;
@@ -70,30 +70,78 @@ begin
                  --ap_ready => ready,
                  --ap_idle =>  idle,
                  --ap_done => done,
-                 tracks_in_0_0_pt_V => pt_in(0),
-                 tracks_in_0_1_pt_V => pt_in(1),
-                 tracks_in_1_0_pt_V => pt_in(2),
-                 tracks_in_1_1_pt_V => pt_in(3), 
-                 tracks_in_2_0_pt_V => pt_in(4),
-                 tracks_in_2_1_pt_V => pt_in(5),
-                 tracks_in_0_0_eta_V => eta_in(0),
-                 tracks_in_0_1_eta_V => eta_in(1),
-                 tracks_in_1_0_eta_V => eta_in(2),
-                 tracks_in_1_1_eta_V => eta_in(3), 
-                 tracks_in_2_0_eta_V => eta_in(4),
-                 tracks_in_2_1_eta_V => eta_in(5),
-                 tracks_in_0_0_phi_V => phi_in(0),
-                 tracks_in_0_1_phi_V => phi_in(1),
-                 tracks_in_1_0_phi_V => phi_in(2),
-                 tracks_in_1_1_phi_V => phi_in(3), 
-                 tracks_in_2_0_phi_V => phi_in(4),
-                 tracks_in_2_1_phi_V => phi_in(5),
-                 tracks_in_0_0_rest_V => rest_in(0),
-                 tracks_in_0_1_rest_V => rest_in(1),
-                 tracks_in_1_0_rest_V => rest_in(2),
-                 tracks_in_1_1_rest_V => rest_in(3), 
-                 tracks_in_2_0_rest_V => rest_in(4),
-                 tracks_in_2_1_rest_V => rest_in(5),
+                 tracks_in_0_0_pt_V => pt_in( 0),
+                 tracks_in_0_1_pt_V => pt_in( 1),
+                 tracks_in_1_0_pt_V => pt_in( 2),
+                 tracks_in_1_1_pt_V => pt_in( 3), 
+                 tracks_in_2_0_pt_V => pt_in( 4),
+                 tracks_in_2_1_pt_V => pt_in( 5),
+                 tracks_in_3_0_pt_V => pt_in( 6),
+                 tracks_in_3_1_pt_V => pt_in( 7),
+                 tracks_in_4_0_pt_V => pt_in( 8),
+                 tracks_in_4_1_pt_V => pt_in( 9), 
+                 tracks_in_5_0_pt_V => pt_in(10),
+                 tracks_in_5_1_pt_V => pt_in(11),
+                 tracks_in_6_0_pt_V => pt_in(12),
+                 tracks_in_6_1_pt_V => pt_in(13),
+                 tracks_in_7_0_pt_V => pt_in(14),
+                 tracks_in_7_1_pt_V => pt_in(15), 
+                 tracks_in_8_0_pt_V => pt_in(16),
+                 tracks_in_8_1_pt_V => pt_in(17),
+                 tracks_in_0_0_eta_V => eta_in( 0),
+                 tracks_in_0_1_eta_V => eta_in( 1),
+                 tracks_in_1_0_eta_V => eta_in( 2),
+                 tracks_in_1_1_eta_V => eta_in( 3), 
+                 tracks_in_2_0_eta_V => eta_in( 4),
+                 tracks_in_2_1_eta_V => eta_in( 5),
+                 tracks_in_3_0_eta_V => eta_in( 6),
+                 tracks_in_3_1_eta_V => eta_in( 7),
+                 tracks_in_4_0_eta_V => eta_in( 8),
+                 tracks_in_4_1_eta_V => eta_in( 9), 
+                 tracks_in_5_0_eta_V => eta_in(10),
+                 tracks_in_5_1_eta_V => eta_in(11),
+                 tracks_in_6_0_eta_V => eta_in(12),
+                 tracks_in_6_1_eta_V => eta_in(13),
+                 tracks_in_7_0_eta_V => eta_in(14),
+                 tracks_in_7_1_eta_V => eta_in(15), 
+                 tracks_in_8_0_eta_V => eta_in(16),
+                 tracks_in_8_1_eta_V => eta_in(17),
+                 tracks_in_0_0_phi_V => phi_in( 0),
+                 tracks_in_0_1_phi_V => phi_in( 1),
+                 tracks_in_1_0_phi_V => phi_in( 2),
+                 tracks_in_1_1_phi_V => phi_in( 3), 
+                 tracks_in_2_0_phi_V => phi_in( 4),
+                 tracks_in_2_1_phi_V => phi_in( 5),
+                 tracks_in_3_0_phi_V => phi_in( 6),
+                 tracks_in_3_1_phi_V => phi_in( 7),
+                 tracks_in_4_0_phi_V => phi_in( 8),
+                 tracks_in_4_1_phi_V => phi_in( 9), 
+                 tracks_in_5_0_phi_V => phi_in(10),
+                 tracks_in_5_1_phi_V => phi_in(11),
+                 tracks_in_6_0_phi_V => phi_in(12),
+                 tracks_in_6_1_phi_V => phi_in(13),
+                 tracks_in_7_0_phi_V => phi_in(14),
+                 tracks_in_7_1_phi_V => phi_in(15), 
+                 tracks_in_8_0_phi_V => phi_in(16),
+                 tracks_in_8_1_phi_V => phi_in(17),
+                 tracks_in_0_0_rest_V => rest_in( 0),
+                 tracks_in_0_1_rest_V => rest_in( 1),
+                 tracks_in_1_0_rest_V => rest_in( 2),
+                 tracks_in_1_1_rest_V => rest_in( 3), 
+                 tracks_in_2_0_rest_V => rest_in( 4),
+                 tracks_in_2_1_rest_V => rest_in( 5),
+                 tracks_in_3_0_rest_V => rest_in( 6),
+                 tracks_in_3_1_rest_V => rest_in( 7),
+                 tracks_in_4_0_rest_V => rest_in( 8),
+                 tracks_in_4_1_rest_V => rest_in( 9), 
+                 tracks_in_5_0_rest_V => rest_in(10),
+                 tracks_in_5_1_rest_V => rest_in(11),
+                 tracks_in_6_0_rest_V => rest_in(12),
+                 tracks_in_6_1_rest_V => rest_in(13),
+                 tracks_in_7_0_rest_V => rest_in(14),
+                 tracks_in_7_1_rest_V => rest_in(15), 
+                 tracks_in_8_0_rest_V => rest_in(16),
+                 tracks_in_8_1_rest_V => rest_in(17),
                  tracks_out_0_pt_V => pt_out(0),
                  tracks_out_0_eta_V => eta_out(0),
                  tracks_out_0_phi_V => phi_out(0),
@@ -106,6 +154,30 @@ begin
                  tracks_out_2_eta_V => eta_out(2),
                  tracks_out_2_phi_V => phi_out(2),
                  tracks_out_2_rest_V => rest_out(2),
+                 tracks_out_3_pt_V => pt_out(3),
+                 tracks_out_3_eta_V => eta_out(3),
+                 tracks_out_3_phi_V => phi_out(3),
+                 tracks_out_3_rest_V => rest_out(3),
+                 tracks_out_4_pt_V => pt_out(4),
+                 tracks_out_4_eta_V => eta_out(4),
+                 tracks_out_4_phi_V => phi_out(4),
+                 tracks_out_4_rest_V => rest_out(4),
+                 tracks_out_5_pt_V => pt_out(5),
+                 tracks_out_5_eta_V => eta_out(5),
+                 tracks_out_5_phi_V => phi_out(5),
+                 tracks_out_5_rest_V => rest_out(5),
+                 tracks_out_6_pt_V => pt_out(6),
+                 tracks_out_6_eta_V => eta_out(6),
+                 tracks_out_6_phi_V => phi_out(6),
+                 tracks_out_6_rest_V => rest_out(6),
+                 tracks_out_7_pt_V => pt_out(7),
+                 tracks_out_7_eta_V => eta_out(7),
+                 tracks_out_7_phi_V => phi_out(7),
+                 tracks_out_7_rest_V => rest_out(7),
+                 tracks_out_8_pt_V => pt_out(8),
+                 tracks_out_8_eta_V => eta_out(8),
+                 tracks_out_8_phi_V => phi_out(8),
+                 tracks_out_8_rest_V => rest_out(8),
                  newevent => newevent,
                  newevent_out => newevent_out
              );
@@ -139,9 +211,12 @@ begin
             begin
                 if rising_edge(clk_p) then
                     for i in 4 * N_REGION - 1 downto N_OUT loop
-                        copy_in(i) <= d(i);
-                        copy_out(i) <= copy_in(i);
-                        q(i) <= copy_out(i);
+                        --copy_in(i) <= d(i);
+                        --copy_out(i) <= copy_in(i);
+                        --q(i) <= copy_out(i);
+                        q(i).data <= (others => '0');
+                        q(i).valid <= '0';
+                        q(i).strobe <= '1';
                     end loop;
                 end if;
             end process copy;
