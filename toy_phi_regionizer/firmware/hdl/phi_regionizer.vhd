@@ -36,7 +36,6 @@ entity regionizer is
             tracks_in_1_1_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
             tracks_in_2_0_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
             tracks_in_2_1_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
-
             tracks_in_3_0_pt_V : IN STD_LOGIC_VECTOR (13 downto 0);
             tracks_in_3_1_pt_V : IN STD_LOGIC_VECTOR (13 downto 0);
             tracks_in_4_0_pt_V : IN STD_LOGIC_VECTOR (13 downto 0);

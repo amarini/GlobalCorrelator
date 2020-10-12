@@ -20,8 +20,8 @@ There is one additional boolean input that is set to true in the first clock cyc
    * VHDL native implementation (still in the HLS directory), that passes standalone behavioural simulation in VHDL
  * "merge 2" mode:
    * working reference c++ implementation in the HLS testbench
-   * HLS implementation doesn't work (requires II=2), and doesn't even pass c-simulation
    * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
+   * HLS implementation in one go doesn't work, but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis and standalone behavioural simulation in VHDL)
  * "full merge" mode:
    * working reference c++ implementation in the HLS testbench
    * HLS implementation doesn't work (didn't even try), and doesn't even pass c-simulation

@@ -11,7 +11,14 @@ elif [[ "$1" == "vhdl_nomerge" ]]; then
     HLSPROJ="project_nomerge"
 elif [[ "$1" == "vhdl_m2" ]]; then
     VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
-    HLSPROJ="project_m2"
+    HLSPROJ="project_m2_input"
+elif [[ "$1" == "hls_m2_slices" ]]; then
+    VHDLS="$VHDLS project_m2_input/solution/syn/vhdl/route_link2fifo.vhd  project_m2_input/solution/syn/vhdl/router_m2_input_slice.vhd"
+    VHDLS="$VHDLS project_m2_fifo/solution/syn/vhdl/router_m2_fifo_slice_fifos_data_V_0.vhd  project_m2_fifo/solution/syn/vhdl/router_m2_fifo_slice.vhd"
+    VHDLS="$VHDLS project_m2_merge2/solution/syn/vhdl/router_m2_merge2_slice.vhd"
+    VHDLS="$VHDLS project_m2_output/solution/syn/vhdl/router_m2_output_slice.vhd"
+    VHDLS="$VHDLS ${FW}/regionizer_data_stdlogic.vhd ${FW}/phi_regionizer_m2_hls_slices.vhd phi_regionizer_m2_vhdl_tb.vhd"
+    HLSPROJ="project_m2_input"
 elif [[ "$1" == "vhdl" ]]; then
     VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/phi_regionizer.vhd phi_regionizer_vhdl_tb.vhd"
     HLSPROJ="project"

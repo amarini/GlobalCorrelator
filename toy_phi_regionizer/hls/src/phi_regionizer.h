@@ -45,6 +45,7 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 #else 
 #define NSECTORS 9
 #endif
+
 #define NFIBERS  2
 #define NFIFOS   6
 #define NSORTED  28
@@ -54,12 +55,13 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 
 #ifdef ROUTER_MUX
     #define NOUTLINKS NPFSTREAMS
+    #define ALGO_LATENCY 3
 #elif defined(ROUTER_NOMERGE)
     #define NOUTLINKS NSECTORS*NFIFOS
     #define ALGO_LATENCY 2
 #elif defined(ROUTER_M2)
     #define NOUTLINKS NSECTORS*(NFIFOS/2)
-    #define ALGO_LATENCY 3
+    #define ALGO_LATENCY 1
 #else
     #define NOUTLINKS NSECTORS
     #define ALGO_LATENCY 3

@@ -113,7 +113,12 @@ struct RegionBuilder {
 struct RegionMux {
     Track buffer[NREGIONS][NSORTED];
     int iter, ireg;
-    RegionMux() { iter = 0; ireg = -1; }
+    RegionMux() { 
+        iter = 0; ireg = -1; 
+        for (int i = 0; i < NREGIONS; ++i) {
+            for (int j = 0; j < NSORTED; ++j) clear(buffer[i][j]);
+        }
+    }
     bool stream(bool newevt, Track stream_out[NPFSTREAMS]) {
         if (newevt) { iter = 0; ireg = 0; }
         if (ireg < NREGIONS) {
@@ -175,7 +180,7 @@ struct Regionizer {
         Track routed[NREGIONS];
         write_out(routed);
         for (int i = 0; i < NREGIONS; ++i) {
-            builder[i].push(newevt, routed[i], &bigmux[i][0]);
+            builder[i].push(newevt, routed[i], &bigmux.buffer[i][0]);
         }
         return bigmux.stream(newevt && (nevt > 1), out);
 #else
@@ -215,7 +220,8 @@ int main(int argc, char **argv) {
             }
             for (int f = 0; f < NFIBERS; ++f) {
                 int ntracks_fiber = ntracks + abs(rand()) % 4; // and add a bit of randomness between the two fibers
-                //if (itest <= 2) ntracks_fiber = (s == 0 && f == 0 ? TLEN : 0);
+                if (itest <= 2) ntracks_fiber = (s == 0 && f == 0 ? TLEN : 0);
+                ntracks_fiber /= 4;
                 for (int i = 0; i < ntracks_fiber; ++i) {
                     inputs[s][f].push_back(randTrack(itest <= 2 ? 100*itest+i+1 : 100*itest+10*(s+1)+f+1));
                 }
@@ -223,8 +229,8 @@ int main(int argc, char **argv) {
         }
         for (int i = 0; i < TLEN; ++i, ++frame) {
             fprintf(fin,    "%05d %1d   ", frame, int(i==0));
-            fprintf(stdout, "%03d %1d   ", frame, int(i==0));
             fprintf(fin_emp,  "Frame %04u : 1v%016llx", frame, uint64_t(i==0));
+            if (itest <= 4) fprintf(stdout, "%03d %1d   ", frame, int(i==0));
 
             Track links_in[NSECTORS][NFIBERS];
             ap_uint<64> links64_in[NSECTORS][NFIBERS];
@@ -236,8 +242,8 @@ int main(int argc, char **argv) {
                     }
                     links64_in[s][f] = packTrack(links_in[s][f]);
                     printTrack(fin, links_in[s][f]);
-                    printTrackShort(stdout, links_in[s][f]);
                     fprintf(fin_emp,  " 1v%016llx", links64_in[s][f].to_uint64());
+                    if (itest <= 4) printTrackShort(stdout, links_in[s][f]);
                 }
             }
             fprintf(fin, "\n");
@@ -274,13 +280,15 @@ int main(int argc, char **argv) {
             fprintf(fref, "\n");
             fprintf(fref_emp, "\n");
 
+            if (itest <= 4) {
             fprintf(stdout, " | %1d %1d  ", int(ref_good), int(ref_good && newev_ref));
             for (int r = 0; r < NOUTLINKS; ++r) printTrackShort(stdout, links_ref[r]);
             fprintf(stdout, " | %1d %1d  ", int(good), int(newev_out && good));
             for (int r = 0; r < NOUTLINKS; ++r) printTrackShort(stdout, links_out[r]);
             fprintf(stdout, "\n"); fflush(stdout);
+            }
 
-#ifndef ROUTER_MUX
+#ifdef ROUTER_MUX
             continue;
 #endif
             // begin validation
