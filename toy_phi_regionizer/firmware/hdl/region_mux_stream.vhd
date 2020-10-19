@@ -37,23 +37,18 @@ begin
                     count    <= 0;
                 else
                     if count < PFII-1 then
-                        for i in 0 to NSTREAM-1 loop
-                            if i*PFII+1 < NSORTED then
-                                regions(i*PFII) <= regions(i*PFII+1);
-                                valid(i*PFII)   <= valid(i*PFII+1);
-                            else
-                                valid(i*PFII) <= '0';
-                            end if;
-                        end loop;
+                        regions(NSORTED-2 downto 0) <= regions(NSORTED-1 downto 1);
+                        valid(NSORTED-2 downto 0)   <= valid(NSORTED-1 downto 1);
+                        valid(NSORTED-1)            <= '0';
                         count <= count + 1;
                     else
                         for r in 0 to NREGIONS-2 loop
-                            for i in 0 to NSTREAM-1 loop
+                            for i in 0 to NSORTED-1 loop
                                 regions(r*NSORTED+i) <= regions((r+1)*NSORTED+i);
-                                valid(r*NSORTED+i) <= valid((r+1)*NSORTED+i);
+                                valid(  r*NSORTED+i) <= valid(  (r+1)*NSORTED+i);
                             end loop;
                         end loop;
-                        for i in 0 to NSTREAM-1 loop
+                        for i in 0 to NSORTED-1 loop
                             valid((NREGIONS-1)*NSORTED+i) <= '0';
                         end loop;
                         count <= 0;

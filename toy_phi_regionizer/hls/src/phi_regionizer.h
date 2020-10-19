@@ -49,7 +49,7 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 #define NFIBERS  2
 #define NFIFOS   6
 #define NSORTED  24
-#define PFLOWII  1
+#define PFLOWII  4
 #define NPFSTREAMS ((NSORTED+PFLOWII-1)/PFLOWII)
 #define NREGIONS NSECTORS
 

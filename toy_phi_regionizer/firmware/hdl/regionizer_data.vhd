@@ -15,7 +15,7 @@ package regionizer_data is
     constant NFIBERS : natural := 2;
     constant NFIFOS : natural := NFIBERS*3;
     constant NSORTED : natural := 24;
-    constant PFII : natural := 1;
+    constant PFII : natural := 4;
     constant NSTREAM : natural := (NSORTED+PFII-1)/PFII;
 end package;
 
