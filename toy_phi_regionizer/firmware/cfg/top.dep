@@ -3,11 +3,15 @@ src rolling_fifo.vhd
 # src fifo_merge2.vhd
 src fifo_merge2_full.vhd
 src fifo_merge3.vhd
+src stream_sort.vhd
+src region_mux_stream.vhd
 # src phi_regionizer_nomerge.vhd
 # src phi_regionizer_m2.vhd
-src phi_regionizer.vhd
+#src phi_regionizer.vhd
+src phi_regionizer_mux.vhd
 # src emp_payload_m2.vhd
-src emp_payload.vhd
+#src emp_payload.vhd
+src emp_payload_mux.vhd
 addrtab -c emp-fwk:components/payload emp_payload.xml
 src -c emp-fwk:components/payload ../ucf/emp_simple_payload.tcl
 include -c emp-fwk:boards/vcu118

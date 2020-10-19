@@ -13,6 +13,11 @@ As the merging of the FIFO output to fully implement this is not yet there in th
 The whole system assumes TMUX=6, and 360 MHz (clock ratio 9), so 54 clocks per event. 
 There is one additional boolean input that is set to true in the first clock cycle of the event, and one additional boolean output that becomes true when block outputs the first track of the new event.
 
+An additional "mux" mode is implemented doing also the next steps for the preparation of the PF block inputs. It is assumed that the PF block output will run in a separate clock domain at an II>1 (II=4 is used in the example, as in the TDR).
+ * build in each region a (sorted) list of the N highest pT tracks (N=24 in this example)
+ * after a full TMUX period, gather in the list of N tracks from each region, buffer them in, and stream them out N/II at each clock
+The idea is that the N/II streams will be sent to dual-clock FIFOs in order to perform the clock domain transition, and the fragments reassembled and fed into PF.
+
 ## Implementation status:
  * "no merge" mode:
    * working reference c++ implementation in the HLS testbench
@@ -26,10 +31,20 @@ There is one additional boolean input that is set to true in the first clock cyc
    * working reference c++ implementation in the HLS testbench
    * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
    * HLS implementation in one go doesn't work (Vivado can't understand the dependency of the data flow), but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis for all modules, and standalone behavioural simulation in VHDL)
+ * "mux" mode:
+   * working reference c++ implementation in the HLS testbench
+   * VHDL native implementation passes standalone behavioural simulation in VHDL, and synthesis & implementation (incl. timing) as emp payload. The resource usage for the EMP payload is 23.4k LUTs (2%), 42.2k FFs (1.9%), 54 BRAM36 (2.5%), where the percentage are for the total of the VU9P.
 
 ## Running
 
 In the HLS directory:
  * `run_hls_xyz.tcl` for the HLS
  * `run_vhdltb.sh` for the behavioural simulation in VHDL
+
+For the EMP project, from the top-level directory
+````
+bash scripts/setupProject.sh toy_phi_regionizer --nohls
+bash scrips/buildFirmware.sh toy_phi_regionizer a 
+bash scrips/buildFirmware.sh toy_phi_regionizer resource-usage
+````
 

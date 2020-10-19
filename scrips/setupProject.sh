@@ -42,20 +42,22 @@ else
     exit 1;
 fi;
 
-HLS_COMPS=""
-pushd algo-work/src/ctl1-demos/$PROJECT
-    for D in $(find . -maxdepth 1 -name 'hls*' -type d); do 
-        test -f $D/run_hls.tcl || continue;
-        echo "Processing HLS component $D";
-        if test -d $D/project/solution/impl/ip; then
-            echo " --> solution already existing and implemented up to IP core; nothing to do.";
-        else
-            echo " --> running vivado_hls for this project";
-            ( cd $D && vivado_hls -f run_hls.tcl );
-        fi;
-        HLS_COMPS="${HLS_COMPS} $(basename $D)";
-    done
-popd
+if [[ "$2" != "--nohls" ]]; then
+    HLS_COMPS=""
+    pushd algo-work/src/ctl1-demos/$PROJECT
+        for D in $(find . -maxdepth 1 -name 'hls*' -type d); do 
+            test -f $D/run_hls.tcl || continue;
+            echo "Processing HLS component $D";
+            if test -d $D/project/solution/impl/ip; then
+                echo " --> solution already existing and implemented up to IP core; nothing to do.";
+            else
+                echo " --> running vivado_hls for this project";
+                ( cd $D && vivado_hls -f run_hls.tcl );
+            fi;
+            HLS_COMPS="${HLS_COMPS} $(basename $D)";
+        done
+    popd
+fi;
 
 pushd algo-work
     test -d proj/$PROJECT && rm -rf proj/$PROJECT 
