@@ -14,14 +14,12 @@ architecture Behavioral of testbench is
     constant NSECTORS : natural := 9;
     constant NFIBERS : natural := 2;
     constant NFIFOS : natural := 6;
-    constant NREGIONS : natural := NSECTORS;
+    constant NREGIONS : natural := NSECTORS*(NFIFOS/2);
 
     type pt_vect     is array(natural range <>) of std_logic_vector(13 downto 0);
     type etaphi_vect is array(natural range <>) of std_logic_vector(11 downto 0);
     type rest_vect   is array(natural range <>) of std_logic_vector(25 downto 0);
     
-    type w64_vec     is array(natural range <>) of std_logic_vector(63 downto 0);
-
     signal clk : std_logic := '0';
     signal rst : std_logic := '0';
     signal start, ready, idle, done : std_logic;
@@ -34,19 +32,13 @@ architecture Behavioral of testbench is
     signal rest_in:  rest_vect(NSECTORS*NFIBERS-1 downto 0); -- of std_logic_vector(25 downto 0);
     signal rest_out: rest_vect(NREGIONS-1         downto 0); -- of std_logic_vector(25 downto 0);
 
-    signal fifo_dbg, fifo_dbg_d: w64_vec(NFIFOS-1 downto 0);
-    signal merger2_dbg: w64_vec((NFIFOS/2)-1 downto 0);
-    signal merger_dbg: w64_vec(0 downto 0);
-
     file Fi : text open read_mode is "input.txt";
     file Fo : text open write_mode is "output_vhdl_tb.txt";
-    file Fd : text open write_mode is "debug_vhdl_tb.txt";
-
 
 begin
     clk  <= not clk after 1.25 ns;
     
-    uut : entity work.regionizer
+    uut : entity work.regionizer_m2
         port map(ap_clk => clk, 
                  ap_rst => rst, 
                  ap_start => start,
@@ -161,23 +153,124 @@ begin
                  tracks_out_8_eta_V => eta_out(8),
                  tracks_out_8_phi_V => phi_out(8),
                  tracks_out_8_rest_V => rest_out(8),
+                 tracks_out_9_pt_V => pt_out(9),
+                 tracks_out_9_eta_V => eta_out(9),
+                 tracks_out_9_phi_V => phi_out(9),
+                 tracks_out_9_rest_V => rest_out(9),
+                 tracks_out_10_pt_V => pt_out(10),
+                 tracks_out_10_eta_V => eta_out(10),
+                 tracks_out_10_phi_V => phi_out(10),
+                 tracks_out_10_rest_V => rest_out(10),
+                 tracks_out_11_pt_V => pt_out(11),
+                 tracks_out_11_eta_V => eta_out(11),
+                 tracks_out_11_phi_V => phi_out(11),
+                 tracks_out_11_rest_V => rest_out(11),
+                 tracks_out_12_pt_V => pt_out(12),
+                 tracks_out_12_eta_V => eta_out(12),
+                 tracks_out_12_phi_V => phi_out(12),
+                 tracks_out_12_rest_V => rest_out(12),
+                 tracks_out_13_pt_V => pt_out(13),
+                 tracks_out_13_eta_V => eta_out(13),
+                 tracks_out_13_phi_V => phi_out(13),
+                 tracks_out_13_rest_V => rest_out(13),
+                 tracks_out_14_pt_V => pt_out(14),
+                 tracks_out_14_eta_V => eta_out(14),
+                 tracks_out_14_phi_V => phi_out(14),
+                 tracks_out_14_rest_V => rest_out(14),
+                 tracks_out_15_pt_V => pt_out(15),
+                 tracks_out_15_eta_V => eta_out(15),
+                 tracks_out_15_phi_V => phi_out(15),
+                 tracks_out_15_rest_V => rest_out(15),
+                 tracks_out_16_pt_V => pt_out(16),
+                 tracks_out_16_eta_V => eta_out(16),
+                 tracks_out_16_phi_V => phi_out(16),
+                 tracks_out_16_rest_V => rest_out(16),
+                 tracks_out_17_pt_V => pt_out(17),
+                 tracks_out_17_eta_V => eta_out(17),
+                 tracks_out_17_phi_V => phi_out(17),
+                 tracks_out_17_rest_V => rest_out(17),
+                 tracks_out_18_pt_V => pt_out(18),
+                 tracks_out_18_eta_V => eta_out(18),
+                 tracks_out_18_phi_V => phi_out(18),
+                 tracks_out_18_rest_V => rest_out(18),
+                 tracks_out_19_pt_V => pt_out(19),
+                 tracks_out_19_eta_V => eta_out(19),
+                 tracks_out_19_phi_V => phi_out(19),
+                 tracks_out_19_rest_V => rest_out(19),
+                 tracks_out_20_pt_V => pt_out(20),
+                 tracks_out_20_eta_V => eta_out(20),
+                 tracks_out_20_phi_V => phi_out(20),
+                 tracks_out_20_rest_V => rest_out(20),
+                 tracks_out_21_pt_V => pt_out(21),
+                 tracks_out_21_eta_V => eta_out(21),
+                 tracks_out_21_phi_V => phi_out(21),
+                 tracks_out_21_rest_V => rest_out(21),
+                 tracks_out_22_pt_V => pt_out(22),
+                 tracks_out_22_eta_V => eta_out(22),
+                 tracks_out_22_phi_V => phi_out(22),
+                 tracks_out_22_rest_V => rest_out(22),
+                 tracks_out_23_pt_V => pt_out(23),
+                 tracks_out_23_eta_V => eta_out(23),
+                 tracks_out_23_phi_V => phi_out(23),
+                 tracks_out_23_rest_V => rest_out(23),
+                 tracks_out_24_pt_V => pt_out(24),
+                 tracks_out_24_eta_V => eta_out(24),
+                 tracks_out_24_phi_V => phi_out(24),
+                 tracks_out_24_rest_V => rest_out(24),
+                 tracks_out_25_pt_V => pt_out(25),
+                 tracks_out_25_eta_V => eta_out(25),
+                 tracks_out_25_phi_V => phi_out(25),
+                 tracks_out_25_rest_V => rest_out(25),
+                 tracks_out_26_pt_V => pt_out(26),
+                 tracks_out_26_eta_V => eta_out(26),
+                 tracks_out_26_phi_V => phi_out(26),
+                 tracks_out_26_rest_V => rest_out(26),
                  -- begin debug
-                 dbg_fifo0 => fifo_dbg(0),
-                 dbg_fifo1 => fifo_dbg(1),
-                 dbg_fifo2 => fifo_dbg(2),
-                 dbg_fifo3 => fifo_dbg(3),
-                 dbg_fifo4 => fifo_dbg(4),
-                 dbg_fifo5 => fifo_dbg(5),
-                 dbg_fifo0_d => fifo_dbg_d(0),
-                 dbg_fifo1_d => fifo_dbg_d(1),
-                 dbg_fifo2_d => fifo_dbg_d(2),
-                 dbg_fifo3_d => fifo_dbg_d(3),
-                 dbg_fifo4_d => fifo_dbg_d(4),
-                 dbg_fifo5_d => fifo_dbg_d(5),
-                 dbg_merge0 => merger2_dbg(0),
-                 dbg_merge1 => merger2_dbg(1),
-                 dbg_merge2 => merger2_dbg(2),
-                 dbg_merge  => merger_dbg(0),
+                 --dbg_sec0_fifo0 => fifo_dbg(0),
+                 --dbg_sec0_fifo1 => fifo_dbg(1),
+                 --dbg_sec0_fifo2 => fifo_dbg(2),
+                 --dbg_sec0_fifo3 => fifo_dbg(3),
+                 --dbg_sec0_fifo4 => fifo_dbg(4),
+                 --dbg_sec0_fifo5 => fifo_dbg(5),
+                 --dbg_sec1_fifo0 => fifo_dbg(6),
+                 --dbg_sec1_fifo1 => fifo_dbg(7),
+                 --dbg_sec1_fifo2 => fifo_dbg(8),
+                 --dbg_sec1_fifo3 => fifo_dbg(9),
+                 --dbg_sec1_fifo4 => fifo_dbg(10),
+                 --dbg_sec1_fifo5 => fifo_dbg(11),
+                 --dbg_sec2_fifo0 => fifo_dbg(12),
+                 --dbg_sec2_fifo1 => fifo_dbg(13),
+                 --dbg_sec2_fifo2 => fifo_dbg(14),
+                 --dbg_sec2_fifo3 => fifo_dbg(15),
+                 --dbg_sec2_fifo4 => fifo_dbg(16),
+                 --dbg_sec2_fifo5 => fifo_dbg(17),
+                 --dbg_sec0_fifo0_d => fifo_dbg_d(0),
+                 --dbg_sec0_fifo1_d => fifo_dbg_d(1),
+                 --dbg_sec0_fifo2_d => fifo_dbg_d(2),
+                 --dbg_sec0_fifo3_d => fifo_dbg_d(3),
+                 --dbg_sec0_fifo4_d => fifo_dbg_d(4),
+                 --dbg_sec0_fifo5_d => fifo_dbg_d(5),
+                 --dbg_sec1_fifo0_d => fifo_dbg_d(6),
+                 --dbg_sec1_fifo1_d => fifo_dbg_d(7),
+                 --dbg_sec1_fifo2_d => fifo_dbg_d(8),
+                 --dbg_sec1_fifo3_d => fifo_dbg_d(9),
+                 --dbg_sec1_fifo4_d => fifo_dbg_d(10),
+                 --dbg_sec1_fifo5_d => fifo_dbg_d(11),
+                 --dbg_sec2_fifo0_d => fifo_dbg_d(12),
+                 --dbg_sec2_fifo1_d => fifo_dbg_d(13),
+                 --dbg_sec2_fifo2_d => fifo_dbg_d(14),
+                 --dbg_sec2_fifo3_d => fifo_dbg_d(15),
+                 --dbg_sec2_fifo4_d => fifo_dbg_d(16),
+                 --dbg_sec2_fifo5_d => fifo_dbg_d(17),
+                 --dbg_sec0_merge0 => merger_dbg(0),
+                 --dbg_sec0_merge1 => merger_dbg(1),
+                 --dbg_sec0_merge2 => merger_dbg(2),
+                 --dbg_sec1_merge0 => merger_dbg(3),
+                 --dbg_sec1_merge1 => merger_dbg(4),
+                 --dbg_sec1_merge2 => merger_dbg(5),
+                 --dbg_sec2_merge0 => merger_dbg(6),
+                 --dbg_sec2_merge1 => merger_dbg(7),
+                 --dbg_sec2_merge2 => merger_dbg(8),
                  -- end debug
                  newevent => newevent,
                  newevent_out => newevent_out
@@ -229,60 +322,41 @@ begin
                 write(Lo, to_integer(signed(phi_out(i))),    field => 5); 
                 write(Lo, to_integer(unsigned(rest_out(i))), field => 5); 
             end loop;
-            --write(Lo, string'(" |  ready ")); 
-            --write(Lo, ready); 
-            --write(Lo, string'("   idle ")); 
-            --write(Lo, idle); 
-            --write(Lo, string'("  done ")); 
-            --write(Lo, done); 
             writeline(Fo, Lo);
-            ---- debug
-            write(Lo, frame, field=>5);  
-            write(Lo, string'(" ")); 
-            for isec in 0 to 0 loop 
-                for imerge in 0 to (NFIFOS/2)-1 loop 
-                    for ififo in 2*imerge to 2*imerge+1 loop
-                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(4)); 
-                        write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(37 downto 32))), field => 3); 
-                        write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(21 downto 16))), field => 3); 
-                        write(Lo, string'(" ")); 
-                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(0)); 
-                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(1)); 
-                        write(Lo, fifo_dbg(isec*NFIFOS+ififo)(2)); 
-                        write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(61 downto 48))), field => 4); 
-                        write(Lo, string'(" ")); 
-                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(32)); 
-                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(33)); 
-                        write(Lo, to_integer(unsigned(fifo_dbg_d(isec*NFIFOS+ififo)(13 downto 0))), field => 4); 
-                        write(Lo, string'(" "));
-                        write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(34)); 
-                        write(Lo, string'(" | ")); 
-                    end loop;
-                    write(Lo, merger2_dbg(isec*NFIFOS/2+imerge)(14)); 
-                    write(Lo, to_integer(unsigned(merger2_dbg(isec*NFIFOS/2+imerge)(13 downto 0))), field => 4); 
-                    write(Lo, string'(" "));
-                    write(Lo, merger2_dbg(isec*NFIFOS/2+imerge)(29)); 
-                    write(Lo, to_integer(unsigned(merger2_dbg(isec*NFIFOS/2+imerge)(28 downto 15))), field => 4); 
-                    write(Lo, string'(" "));
-                    write(Lo, merger2_dbg(isec*NFIFOS/2+imerge)(62)); 
-                    write(Lo, merger2_dbg(isec*NFIFOS/2+imerge)(63)); 
-                    write(Lo, to_integer(unsigned(merger2_dbg(isec*NFIFOS/2+imerge)(60 downto 47))), field => 4); 
-                    write(Lo, string'(" "));
-                    write(Lo, merger2_dbg(isec*NFIFOS/2+imerge)(61)); 
-                    write(Lo, string'(" || ")); 
-                end loop;
-                write(Lo, merger_dbg(isec)(14)); 
-                write(Lo, to_integer(unsigned(merger_dbg(isec)(13 downto 0))), field => 4); 
-                write(Lo, string'(" "));
-                write(Lo, merger_dbg(isec)(29)); 
-                write(Lo, to_integer(unsigned(merger_dbg(isec)(28 downto 15))), field => 4); 
-                write(Lo, string'(" "));
-                write(Lo, merger_dbg(isec)(62)); 
-                write(Lo, merger_dbg(isec)(63)); 
-                write(Lo, to_integer(unsigned(merger_dbg(isec)(61 downto 48))), field => 4); 
-                write(Lo, string'(" ||| ")); 
-            end loop;
-            writeline(Fd, Lo);
+            --write(Lo, frame, field=>5);  
+            --write(Lo, string'(" ")); 
+            --for isec in 0 to NSECTORS-1 loop 
+            --    for imerge in 0 to (NFIFOS/2)-1 loop 
+            --        for ififo in 2*imerge to 2*imerge+1 loop
+            --            write(Lo, fifo_dbg(isec*NFIFOS+ififo)(4)); 
+            --            write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(37 downto 32))), field => 3); 
+            --            write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(21 downto 16))), field => 3); 
+            --            write(Lo, string'(" ")); 
+            --            write(Lo, fifo_dbg(isec*NFIFOS+ififo)(0)); 
+            --            write(Lo, fifo_dbg(isec*NFIFOS+ififo)(1)); 
+            --            write(Lo, fifo_dbg(isec*NFIFOS+ififo)(2)); 
+            --            write(Lo, to_integer(unsigned(fifo_dbg(isec*NFIFOS+ififo)(61 downto 48))), field => 4); 
+            --            write(Lo, string'(" ")); 
+            --            write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(32)); 
+            --            write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(33)); 
+            --            write(Lo, to_integer(unsigned(fifo_dbg_d(isec*NFIFOS+ififo)(13 downto 0))), field => 4); 
+            --            write(Lo, string'(" "));
+            --            write(Lo, fifo_dbg_d(isec*NFIFOS+ififo)(34)); 
+            --            write(Lo, string'(" | ")); 
+            --        end loop;
+            --        write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(14)); 
+            --        write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(13 downto 0))), field => 4); 
+            --        write(Lo, string'(" "));
+            --        write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(62)); 
+            --        write(Lo, merger_dbg(isec*NFIFOS/2+imerge)(63)); 
+            --        write(Lo, to_integer(unsigned(merger_dbg(isec*NFIFOS/2+imerge)(61 downto 48))), field => 4); 
+            --        if imerge /= (NFIFOS/2)-1 then
+            --            write(Lo, string'(" | ")); 
+            --        end if;
+            --    end loop;
+            --    write(Lo, string'(" || ")); 
+            --end loop;
+            --writeline(Fd, Lo);
             frame := frame + 1;
             --if frame >= 50 then finish(0); end if;
         end loop;

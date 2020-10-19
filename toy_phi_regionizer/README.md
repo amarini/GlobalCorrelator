@@ -21,11 +21,11 @@ There is one additional boolean input that is set to true in the first clock cyc
  * "merge 2" mode:
    * working reference c++ implementation in the HLS testbench
    * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
-   * HLS implementation in one go doesn't work, but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis and standalone behavioural simulation in VHDL)
+   * HLS implementation in one go doesn't work (Vivado can't understand the dependency of the data flow), but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis for all modules, and standalone behavioural simulation in VHDL)
  * "full merge" mode:
    * working reference c++ implementation in the HLS testbench
-   * HLS implementation doesn't work (didn't even try), and doesn't even pass c-simulation
    * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
+   * HLS implementation in one go doesn't work (Vivado can't understand the dependency of the data flow), but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis for all modules, and standalone behavioural simulation in VHDL)
 
 ## Running
 

@@ -13,15 +13,29 @@ elif [[ "$1" == "vhdl_m2" ]]; then
     VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
     HLSPROJ="project_m2_input"
 elif [[ "$1" == "hls_m2_slices" ]]; then
-    VHDLS="$VHDLS project_m2_input/solution/syn/vhdl/route_link2fifo.vhd  project_m2_input/solution/syn/vhdl/router_m2_input_slice.vhd"
-    VHDLS="$VHDLS project_m2_fifo/solution/syn/vhdl/router_m2_fifo_slice_fifos_data_V_0.vhd  project_m2_fifo/solution/syn/vhdl/router_m2_fifo_slice.vhd"
+    VHDLS="$VHDLS project_m2_input/solution/syn/vhdl/route_link2fifo.vhd  project_m2_input/solution/syn/vhdl/router_input_slice.vhd"
+    VHDLS="$VHDLS project_m2_fifo/solution/syn/vhdl/router_fifo_slice_fifos_data_V_0.vhd  project_m2_fifo/solution/syn/vhdl/router_fifo_slice.vhd"
     VHDLS="$VHDLS project_m2_merge2/solution/syn/vhdl/router_m2_merge2_slice.vhd"
     VHDLS="$VHDLS project_m2_output/solution/syn/vhdl/router_m2_output_slice.vhd"
     VHDLS="$VHDLS ${FW}/regionizer_data_stdlogic.vhd ${FW}/phi_regionizer_m2_hls_slices.vhd phi_regionizer_m2_vhdl_tb.vhd"
     HLSPROJ="project_m2_input"
+elif [[ "$1" == "hls_slices" ]]; then
+    VHDLS="$VHDLS project_full_input/solution/syn/vhdl/route_link2fifo.vhd  project_full_input/solution/syn/vhdl/router_input_slice.vhd"
+    VHDLS="$VHDLS project_full_fifo/solution/syn/vhdl/router_fifo_slice_fifos_data_V_0.vhd  project_full_fifo/solution/syn/vhdl/router_fifo_slice.vhd"
+    VHDLS="$VHDLS project_full_merge2/solution/syn/vhdl/router_merge2_slice.vhd"
+    VHDLS="$VHDLS project_full_merge3/solution/syn/vhdl/router_merge3_slice.vhd"
+    VHDLS="$VHDLS project_full_output/solution/syn/vhdl/router_full_output_slice.vhd"
+    VHDLS="$VHDLS ${FW}/regionizer_data_stdlogic.vhd ${FW}/phi_regionizer_hls_slices.vhd phi_regionizer_hls_tb.vhd"
+    HLSPROJ="project_full_input"
 elif [[ "$1" == "vhdl" ]]; then
     VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/phi_regionizer.vhd phi_regionizer_vhdl_tb.vhd"
     HLSPROJ="project"
+elif [[ "$1" == "vhdl_sort" ]]; then
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/phi_regionizer_sort.vhd phi_regionizer_sorted_vhdl_tb.vhd"
+    HLSPROJ="project_mux"
+elif [[ "$1" == "vhdl_mux" ]]; then
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/region_mux_stream.vhd ${FW}/phi_regionizer_mux.vhd phi_regionizer_mux_vhdl_tb.vhd"
+    HLSPROJ="project_mux"
 fi
 
 
@@ -37,7 +51,7 @@ fi;
 IMPL=$HLSPROJ/solution/impl/vhdl
 
 # cleanup
-rm -r xsim* xelab* webtalk* vivado* xvhdl* test.wdb 2> /dev/null || true;
+rm -r xsim* xelab* webtalk* xvhdl* test.wdb 2> /dev/null || true;
 
 
 

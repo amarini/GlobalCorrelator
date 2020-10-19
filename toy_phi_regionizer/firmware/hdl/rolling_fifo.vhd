@@ -18,7 +18,7 @@ entity rolling_fifo is
         valid_out : out std_logic;
         full      : in std_logic;
     -- debug
-        --dbg_w64         : out std_logic_vector(63 downto 0);
+        dbg_w64         : out std_logic_vector(63 downto 0);
     -- end debug
         roll      : in  std_logic;
         roll_out  : out std_logic
@@ -203,12 +203,12 @@ begin
         end process;
 
 
-       --dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, 4 => wren, others => '0');
-       --dbg_w64(21 downto 16) <= std_logic_vector(rptr);
-       --dbg_w64(31 downto 22) <= (others => '0');
-       --dbg_w64(37 downto 32) <= std_logic_vector(wptr);
-       --dbg_w64(47 downto 38) <= (others => '0');
-       --dbg_w64(61 downto 48) <= std_logic_vector(cache.pt);
-       --dbg_w64(63 downto 62) <= (others => '0');
+       dbg_w64(15 downto 0) <= (0 => valid_next, 1 => use_cache, 2 => cache_valid, 4 => wren, others => '0');
+       dbg_w64(21 downto 16) <= std_logic_vector(rptr);
+       dbg_w64(31 downto 22) <= (others => '0');
+       dbg_w64(37 downto 32) <= std_logic_vector(wptr);
+       dbg_w64(47 downto 38) <= (others => '0');
+       dbg_w64(61 downto 48) <= std_logic_vector(cache.pt);
+       dbg_w64(63 downto 62) <= (others => '0');
     
 end Behavioral;

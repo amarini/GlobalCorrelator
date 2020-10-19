@@ -1,4 +1,5 @@
 source configIP.tcl
+set hlsTopFunc router_full
 open_project -reset "project"
 
 set_top ${hlsTopFunc}

@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.regionizer_data.all;
 
-entity regionizer is
+entity regionizer_sort is
     port(
             ap_clk : IN STD_LOGIC;
             ap_rst : IN STD_LOGIC;
@@ -84,72 +84,34 @@ entity regionizer is
             tracks_in_7_1_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
             tracks_in_8_0_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
             tracks_in_8_1_rest_V : IN STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_0_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_0_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_0_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_0_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_1_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_1_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_1_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_1_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_2_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_2_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_2_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_2_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_3_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_3_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_3_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_3_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_4_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_4_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_4_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_4_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_5_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_5_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_5_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_5_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_6_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_6_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_6_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_6_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_7_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_7_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_7_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_7_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-            tracks_out_8_eta_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_8_phi_V : OUT STD_LOGIC_VECTOR (11 downto 0);
-            tracks_out_8_pt_V : OUT STD_LOGIC_VECTOR (13 downto 0);
-            tracks_out_8_rest_V : OUT STD_LOGIC_VECTOR (25 downto 0);
-
-            dbg_fifo0 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo1 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo2 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo3 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo4 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo5 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo0_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo1_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo2_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo3_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo4_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_fifo5_d : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_merge0 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_merge1 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_merge2 : OUT STD_LOGIC_VECTOR(63 downto 0);
-            dbg_merge : OUT STD_LOGIC_VECTOR(63 downto 0);
+            tracks_out_0 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_1 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_2 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_3 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_4 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_5 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_6 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_7 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_8 : OUT particles(NSORTED-1 downto 0);
+            tracks_out_valid_0 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_1 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_2 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_3 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_4 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_5 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_6 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_7 : OUT std_logic_vector(NSORTED-1 downto 0);
+            tracks_out_valid_8 : OUT std_logic_vector(NSORTED-1 downto 0);
             newevent_out : OUT STD_LOGIC
-
     );
-end regionizer;
+end regionizer_sort;
 
-architecture Behavioral of regionizer is
+architecture Behavioral of regionizer_sort is
     constant NREGIONS  : natural := NSECTORS;
     constant NALLFIFOS : natural := NSECTORS*NFIFOS;
     constant NMERGE2   : natural := NSECTORS*(NFIFOS/2);
 
-    constant DEBUG_SECTOR : natural := 0;
-
-    type w64_vec     is array(natural range <>) of std_logic_vector(63 downto 0);
+    --type w64_vec     is array(natural range <>) of std_logic_vector(63 downto 0);
 
     signal links_in :       particles(NSECTORS*NFIBERS-1 downto 0);
     signal fifo_in :        particles(NALLFIFOS-1 downto 0);
@@ -160,23 +122,22 @@ architecture Behavioral of regionizer is
     signal fifo_out_valid :   std_logic_vector(NALLFIFOS-1 downto 0) := (others => '0');
     signal fifo_out_full:     std_logic_vector(NALLFIFOS-1 downto 0) := (others => '0');
     signal fifo_out_roll:     std_logic_vector(NALLFIFOS-1 downto 0) := (others => '0');
-    signal fifo_dbg :         w64_vec(NALLFIFOS-1 downto 0);
+    --signal fifo_dbg :         w64_vec(NALLFIFOS-1 downto 0);
 
     signal merged2_out :        particles(NMERGE2-1 downto 0);
     signal merged2_out_valid :  std_logic_vector(NMERGE2-1 downto 0) := (others => '0');
     signal merged2_out_roll:    std_logic_vector(NMERGE2-1 downto 0) := (others => '0');
     signal merged2_out_full:    std_logic_vector(NMERGE2-1 downto 0) := (others => '0');
-    signal merged2_dbg :        w64_vec(NMERGE2-1 downto 0);
+    --signal merged2_dbg :        w64_vec(NMERGE2-1 downto 0);
 
     signal merged_out :        particles(NREGIONS-1 downto 0);
     signal merged_out_valid :  std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
     signal merged_out_roll:    std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
-    signal merged_dbg :        w64_vec(NREGIONS-1 downto 0);
+    --signal merged_dbg :        w64_vec(NREGIONS-1 downto 0);
 
-    signal regions_out :      particles(NREGIONS-1 downto 0);
-    signal regions_out_valid: std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
-    signal regions_out_roll:  std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
-
+    signal sorted_out :        particles(NREGIONS*NSORTED-1 downto 0);
+    signal sorted_out_valid :  std_logic_vector(NREGIONS*NSORTED-1 downto 0) := (others => '0');
+    signal sorted_out_roll :   std_logic_vector(NREGIONS-1 downto 0) := (others => '0');
 begin
 
     gen_fifos: for ireg in NALLFIFOS-1 downto 0 generate
@@ -188,7 +149,7 @@ begin
                                  roll   => fifo_in_roll(ireg),
                                  d_out    => fifo_out(ireg),
                                  valid_out  => fifo_out_valid(ireg),
-                                 dbg_w64 =>  fifo_dbg(ireg),
+                                 --dbg_w64 =>  fifo_dbg(ireg),
                                  full  => fifo_out_full(ireg),
                                  roll_out  => fifo_out_roll(ireg)
                              );
@@ -208,7 +169,7 @@ begin
                                  valid_out  => merged2_out_valid(imerge),
                                  full1      => fifo_out_full(imerge*2),  
                                  full2      => fifo_out_full(imerge*2+1),
-                                 dbg_w64    => merged2_dbg(imerge),
+                                 --dbg_w64    => merged2_dbg(imerge),
                                  roll_out   => merged2_out_roll(imerge)
                             );
         end generate gen_merger2s;
@@ -229,10 +190,23 @@ begin
                                  full1      => merged2_out_full(imerge*3),  
                                  full2      => merged2_out_full(imerge*3+1),
                                  full3      => merged2_out_full(imerge*3+2),
-                                 dbg_w64    => merged_dbg(imerge),
+                                 --dbg_w64    => merged_dbg(imerge),
                                  roll_out   => merged_out_roll(imerge)
                             );
         end generate gen_merger3s;
+
+    gen_sorters: for isort in NREGIONS-1 downto 0 generate
+        reg_sorter : entity work.stream_sort
+                            generic map(NITEMS => NSORTED)
+                            port map(ap_clk => ap_clk,
+                                d_in => merged_out(isort),
+                                valid_in => merged_out_valid(isort),
+                                roll => merged_out_roll(isort),
+                                d_out => sorted_out((isort+1)*NSORTED-1 downto isort*NSORTED),
+                                valid_out => sorted_out_valid((isort+1)*NSORTED-1 downto isort*NSORTED),
+                                roll_out => sorted_out_roll(isort)
+                            );
+        end generate gen_sorters;
 
     links_in( 0).pt <= unsigned(tracks_in_0_0_pt_V);
     links_in( 1).pt <= unsigned(tracks_in_0_1_pt_V);
@@ -363,125 +337,25 @@ begin
         end if;
     end process link2fifo;
 
-    merged_to_regions : process(ap_clk)
-    begin
-        if rising_edge(ap_clk) then
-            for ireg in 0 to NREGIONS-1 loop
-                if merged_out_valid(ireg) = '1' then
-                    regions_out(ireg) <= merged_out(ireg);
-                    regions_out_valid(ireg) <= '1';
-                else
-                    regions_out(ireg).pt   <= (others => '0');
-                    regions_out(ireg).eta  <= (others => '0');
-                    regions_out(ireg).phi  <= (others => '0');
-                    regions_out(ireg).rest <= (others => '0');
-                    regions_out_valid(ireg) <= '1';
-                end if;
-                regions_out_roll(ireg) <= merged_out_roll(ireg);
-            end loop;
-        end if;
-    end process merged_to_regions;
+    tracks_out_0 <= sorted_out((0+1)*NSORTED-1 downto 0*NSORTED);
+    tracks_out_valid_0 <= sorted_out_valid((0+1)*NSORTED-1 downto 0*NSORTED);
+    tracks_out_1 <= sorted_out((1+1)*NSORTED-1 downto 1*NSORTED);
+    tracks_out_valid_1 <= sorted_out_valid((1+1)*NSORTED-1 downto 1*NSORTED);
+    tracks_out_2 <= sorted_out((2+1)*NSORTED-1 downto 2*NSORTED);
+    tracks_out_valid_2 <= sorted_out_valid((2+1)*NSORTED-1 downto 2*NSORTED);
+    tracks_out_3 <= sorted_out((3+1)*NSORTED-1 downto 3*NSORTED);
+    tracks_out_valid_3 <= sorted_out_valid((3+1)*NSORTED-1 downto 3*NSORTED);
+    tracks_out_4 <= sorted_out((4+1)*NSORTED-1 downto 4*NSORTED);
+    tracks_out_valid_4 <= sorted_out_valid((4+1)*NSORTED-1 downto 4*NSORTED);
+    tracks_out_5 <= sorted_out((5+1)*NSORTED-1 downto 5*NSORTED);
+    tracks_out_valid_5 <= sorted_out_valid((5+1)*NSORTED-1 downto 5*NSORTED);
+    tracks_out_6 <= sorted_out((6+1)*NSORTED-1 downto 6*NSORTED);
+    tracks_out_valid_6 <= sorted_out_valid((6+1)*NSORTED-1 downto 6*NSORTED);
+    tracks_out_7 <= sorted_out((7+1)*NSORTED-1 downto 7*NSORTED);
+    tracks_out_valid_7 <= sorted_out_valid((7+1)*NSORTED-1 downto 7*NSORTED);
+    tracks_out_8 <= sorted_out((8+1)*NSORTED-1 downto 8*NSORTED);
+    tracks_out_valid_8 <= sorted_out_valid((8+1)*NSORTED-1 downto 8*NSORTED);
 
-    tracks_out_0_pt_V <= std_logic_vector(regions_out(0).pt);
-    tracks_out_0_eta_V <= std_logic_vector(regions_out(0).eta);
-    tracks_out_0_phi_V <= std_logic_vector(regions_out(0).phi);
-    tracks_out_0_rest_V <= std_logic_vector(regions_out(0).rest);
-    tracks_out_1_pt_V <= std_logic_vector(regions_out(1).pt);
-    tracks_out_1_eta_V <= std_logic_vector(regions_out(1).eta);
-    tracks_out_1_phi_V <= std_logic_vector(regions_out(1).phi);
-    tracks_out_1_rest_V <= std_logic_vector(regions_out(1).rest);
-    tracks_out_2_pt_V <= std_logic_vector(regions_out(2).pt);
-    tracks_out_2_eta_V <= std_logic_vector(regions_out(2).eta);
-    tracks_out_2_phi_V <= std_logic_vector(regions_out(2).phi);
-    tracks_out_2_rest_V <= std_logic_vector(regions_out(2).rest);
-    tracks_out_3_pt_V <= std_logic_vector(regions_out(3).pt);
-    tracks_out_3_eta_V <= std_logic_vector(regions_out(3).eta);
-    tracks_out_3_phi_V <= std_logic_vector(regions_out(3).phi);
-    tracks_out_3_rest_V <= std_logic_vector(regions_out(3).rest);
-    tracks_out_4_pt_V <= std_logic_vector(regions_out(4).pt);
-    tracks_out_4_eta_V <= std_logic_vector(regions_out(4).eta);
-    tracks_out_4_phi_V <= std_logic_vector(regions_out(4).phi);
-    tracks_out_4_rest_V <= std_logic_vector(regions_out(4).rest);
-    tracks_out_5_pt_V <= std_logic_vector(regions_out(5).pt);
-    tracks_out_5_eta_V <= std_logic_vector(regions_out(5).eta);
-    tracks_out_5_phi_V <= std_logic_vector(regions_out(5).phi);
-    tracks_out_5_rest_V <= std_logic_vector(regions_out(5).rest);
-    tracks_out_6_pt_V <= std_logic_vector(regions_out(6).pt);
-    tracks_out_6_eta_V <= std_logic_vector(regions_out(6).eta);
-    tracks_out_6_phi_V <= std_logic_vector(regions_out(6).phi);
-    tracks_out_6_rest_V <= std_logic_vector(regions_out(6).rest);
-    tracks_out_7_pt_V <= std_logic_vector(regions_out(7).pt);
-    tracks_out_7_eta_V <= std_logic_vector(regions_out(7).eta);
-    tracks_out_7_phi_V <= std_logic_vector(regions_out(7).phi);
-    tracks_out_7_rest_V <= std_logic_vector(regions_out(7).rest);
-    tracks_out_8_pt_V <= std_logic_vector(regions_out(8).pt);
-    tracks_out_8_eta_V <= std_logic_vector(regions_out(8).eta);
-    tracks_out_8_phi_V <= std_logic_vector(regions_out(8).phi);
-    tracks_out_8_rest_V <= std_logic_vector(regions_out(8).rest);
-
-    newevent_out <= regions_out_roll(0);
-
-    dbg_fifo0 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+0);
-    dbg_fifo1 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+1);
-    dbg_fifo2 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+2);
-    dbg_fifo3 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+3);
-    dbg_fifo4 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+4);
-    dbg_fifo5 <= fifo_dbg(DEBUG_SECTOR*NFIFOS+5);
-    dbg_fifo0_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+0).pt);
-    dbg_fifo1_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+1).pt);
-    dbg_fifo2_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+2).pt);
-    dbg_fifo3_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+3).pt);
-    dbg_fifo4_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+4).pt);
-    dbg_fifo5_d(13 downto 0) <= std_logic_vector(fifo_out(DEBUG_SECTOR*NFIFOS+5).pt);
-    dbg_fifo0_d(31 downto 14) <= (others => '0');
-    dbg_fifo1_d(31 downto 14) <= (others => '0');
-    dbg_fifo2_d(31 downto 14) <= (others => '0');
-    dbg_fifo3_d(31 downto 14) <= (others => '0');
-    dbg_fifo4_d(31 downto 14) <= (others => '0');
-    dbg_fifo5_d(31 downto 14) <= (others => '0');
-    dbg_fifo0_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+0);
-    dbg_fifo1_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+1);
-    dbg_fifo2_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+2);
-    dbg_fifo3_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+3);
-    dbg_fifo4_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+4);
-    dbg_fifo5_d(32) <= fifo_out_valid(DEBUG_SECTOR*NFIFOS+5);
-    dbg_fifo0_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+0);
-    dbg_fifo1_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+1);
-    dbg_fifo2_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+2);
-    dbg_fifo3_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+3);
-    dbg_fifo4_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+4);
-    dbg_fifo5_d(33) <= fifo_out_roll(DEBUG_SECTOR*NFIFOS+5);
-    dbg_fifo0_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+0);
-    dbg_fifo1_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+1);
-    dbg_fifo2_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+2);
-    dbg_fifo3_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+3);
-    dbg_fifo4_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+4);
-    dbg_fifo5_d(34) <= fifo_out_full(DEBUG_SECTOR*NFIFOS+5);
-    dbg_fifo0_d(63 downto 35) <= (others => '0');
-    dbg_fifo1_d(63 downto 35) <= (others => '0');
-    dbg_fifo2_d(63 downto 35) <= (others => '0');
-    dbg_fifo3_d(63 downto 35) <= (others => '0');
-    dbg_fifo4_d(63 downto 35) <= (others => '0');
-    dbg_fifo5_d(63 downto 35) <= (others => '0');
-    dbg_merge0(46 downto 0) <= merged2_dbg(DEBUG_SECTOR*NFIFOS/2+0)(46 downto 0);
-    dbg_merge1(46 downto 0) <= merged2_dbg(DEBUG_SECTOR*NFIFOS/2+1)(46 downto 0);
-    dbg_merge2(46 downto 0) <= merged2_dbg(DEBUG_SECTOR*NFIFOS/2+2)(46 downto 0);
-    dbg_merge0(60 downto 47) <= std_logic_vector(merged2_out(DEBUG_SECTOR*NFIFOS/2+0).pt);
-    dbg_merge1(60 downto 47) <= std_logic_vector(merged2_out(DEBUG_SECTOR*NFIFOS/2+1).pt);
-    dbg_merge2(60 downto 47) <= std_logic_vector(merged2_out(DEBUG_SECTOR*NFIFOS/2+2).pt);
-    dbg_merge0(61) <= merged2_out_full(DEBUG_SECTOR*NFIFOS/2+0);
-    dbg_merge1(61) <= merged2_out_full(DEBUG_SECTOR*NFIFOS/2+1);
-    dbg_merge2(61) <= merged2_out_full(DEBUG_SECTOR*NFIFOS/2+2);
-    dbg_merge0(62) <= merged2_out_valid(DEBUG_SECTOR*NFIFOS/2+0);
-    dbg_merge1(62) <= merged2_out_valid(DEBUG_SECTOR*NFIFOS/2+1);
-    dbg_merge2(62) <= merged2_out_valid(DEBUG_SECTOR*NFIFOS/2+2);
-    dbg_merge0(63) <= merged2_out_roll(DEBUG_SECTOR*NFIFOS/2+0);
-    dbg_merge1(63) <= merged2_out_roll(DEBUG_SECTOR*NFIFOS/2+1);
-    dbg_merge2(63) <= merged2_out_roll(DEBUG_SECTOR*NFIFOS/2+2);
-    dbg_merge(47 downto 0) <= merged_dbg(DEBUG_SECTOR)(47 downto 0);
-    dbg_merge(61 downto 48) <= std_logic_vector(merged_out(DEBUG_SECTOR).pt);
-    dbg_merge(62) <= merged_out_valid(DEBUG_SECTOR);
-    dbg_merge(63) <= merged_out_roll(DEBUG_SECTOR);
-
+    newevent_out <= sorted_out_roll(0);
 
 end Behavioral;

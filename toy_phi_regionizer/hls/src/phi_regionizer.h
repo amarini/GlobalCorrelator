@@ -48,8 +48,8 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 
 #define NFIBERS  2
 #define NFIFOS   6
-#define NSORTED  28
-#define PFLOWII  4
+#define NSORTED  24
+#define PFLOWII  1
 #define NPFSTREAMS ((NSORTED+PFLOWII-1)/PFLOWII)
 #define NREGIONS NSECTORS
 
@@ -61,10 +61,10 @@ inline Track unpackTrack(const ap_uint<64> & word) {
     #define ALGO_LATENCY 2
 #elif defined(ROUTER_M2)
     #define NOUTLINKS NSECTORS*(NFIFOS/2)
-    #define ALGO_LATENCY 1
+    #define ALGO_LATENCY 4
 #else
     #define NOUTLINKS NSECTORS
-    #define ALGO_LATENCY 3
+    #define ALGO_LATENCY 5
 #endif
 
 #define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
@@ -72,6 +72,9 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
 void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
 void router_m2(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
+void router_full(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
+//void router_full_d(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out, Track debug_out[NSECTORS*(NFIFOS+NFIFOS/2)], ap_uint<8> debug_flags[NSECTORS*(NFIFOS+NFIFOS/2)]);
+void router_mux(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
 
 void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out);
 

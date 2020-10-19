@@ -23,7 +23,7 @@ entity fifo_merge2_full is
         full1      : out std_logic;
         full2      : out std_logic;
         -- begin debug
-        --dbg_w64    : out std_logic_vector(63 downto 0);
+        dbg_w64    : out std_logic_vector(63 downto 0);
         -- end debug
         roll_out   : out std_logic
     );
@@ -80,7 +80,7 @@ begin
                     valid_out_i <= d1_valid or d2_valid or q1_valid or q2_valid;
                     roll_out_i <= '0';
                     full1_i <= '0';
-                    full2_i <= d1_valid and (d2_valid or q1_valid or q2_valid);
+                    full2_i <= (d1_valid or q1_valid) and (d2_valid or q2_valid);
                     if load2 = '1' then
                         q2 <= d2_in;
                         q2_valid <= d2_valid;
@@ -99,10 +99,10 @@ begin
         valid_out <= valid_out_i;
         roll_out <= roll_out_i;
 
-        --dbg_w64(13 downto 0) <= std_logic_vector(q2.pt);
-        --dbg_w64(14) <= q2_valid;
-        --dbg_w64(28 downto 15) <= std_logic_vector(q1.pt);
-        --dbg_w64(29) <= q1_valid;
-        --dbg_w64(63 downto 30) <= (others => '0');
+        dbg_w64(13 downto 0) <= std_logic_vector(q2.pt);
+        dbg_w64(14) <= q2_valid;
+        dbg_w64(28 downto 15) <= std_logic_vector(q1.pt);
+        dbg_w64(29) <= q1_valid;
+        dbg_w64(63 downto 30) <= (others => '0');
 
 end Behavioral;
