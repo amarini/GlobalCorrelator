@@ -30,7 +30,7 @@ bool tdemux_simple(bool newEvent, const w64 links[NLINKS], w64 out[NLINKS]) {
             //fold[i] = (i == 0 ? 1 : 0);
             offs[i]  =  i * BLKSIZE + (i == 0 ? PAGESIZE : 0);
         }
-        toread = -1;
+        toread = MEMSIZE-1;
     }
 
 
@@ -41,7 +41,6 @@ bool tdemux_simple(bool newEvent, const w64 links[NLINKS], w64 out[NLINKS]) {
             buffer[0][offs[0]] = links[0];
             buffer[1][offs[1]] = links[1];
             buffer[2][offs[2]] = links[2];
-            break;
             break;
         case 1:
             buffer[1][offs[0]] = links[0];
@@ -138,7 +137,11 @@ bool tdemux_simple(bool newEvent, const w64 links[NLINKS], w64 out[NLINKS]) {
             out[i] = buffer[(i+readrobin)%NLINKS][toread];
         }
 
-        toread++; if (toread == MEMSIZE) toread = 0;
+        if (toread == MEMSIZE-1) {
+            toread = 0;
+        } else {
+            toread++;
+        }
 
         readcount++; 
         if (readcount == BLKSIZE) {

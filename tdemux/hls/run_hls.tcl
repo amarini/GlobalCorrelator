@@ -17,6 +17,6 @@ create_clock -period 2.5
 # end here, so that we can then open the project interactively in the gui
 csim_design
 csynth_design
-#cosim_design -trace_level all
+cosim_design -trace_level all
 export_design -format ip_catalog -vendor "cern-cms" -version ${hlsIPVersion} -description ${hlsTopFunc}
 exit
