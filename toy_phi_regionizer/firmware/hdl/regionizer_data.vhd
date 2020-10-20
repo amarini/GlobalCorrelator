@@ -10,6 +10,7 @@ package regionizer_data is
         rest : unsigned(25 downto 0);
     end record;
     type particles   is array(natural range <>) of particle;
+    constant PHI_SHIFT : signed(11 downto 0) := to_signed(160, 12);
 
     constant NSECTORS : natural := 9;
     constant NFIBERS : natural := 2;

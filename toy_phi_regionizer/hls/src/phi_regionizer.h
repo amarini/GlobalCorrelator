@@ -67,7 +67,7 @@ inline Track unpackTrack(const ap_uint<64> & word) {
     #define ALGO_LATENCY 5
 #endif
 
-#define PHI_SHIFT 200 // size of a phi sector (random number for the moment)
+#define PHI_SHIFT 160 // size of a phi sector (in L1PF units, LSB = 0.25 degrees)
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
 void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);

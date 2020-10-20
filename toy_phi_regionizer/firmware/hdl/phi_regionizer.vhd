@@ -309,7 +309,6 @@ begin
 
 
     link2fifo : process(ap_clk)
-        constant PHI_SHIFT : signed(11 downto 0) := to_signed(200, 12);
         variable isec_next, isec_prev : integer range 0 to NSECTORS-1;
         variable link_this, link_next, link_prev : std_logic;
     begin

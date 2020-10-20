@@ -5,6 +5,7 @@ open_project -reset "project"
 set_top ${hlsTopFunc}
 
 add_files src/phi_regionizer.cpp -cflags "-std=c++0x"
+add_files -tb phi_regionizer_ref.cpp -cflags "-std=c++0x"
 add_files -tb phi_regionizer_test.cpp -cflags "-std=c++0x"
 #add_files -tb phi_regionizer_test.cpp -cflags "-std=c++0x -DEMP_PACKED_64"
 

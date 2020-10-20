@@ -165,15 +165,15 @@ begin
             write(Lo, string'(" ")); 
             for i in 0 to NSTREAM-1 loop 
                 if (tracks_out_valid(i) = '0') then -- this is not yet done in the VHDL
-                    write(Lo, 0, field => 5); 
-                    write(Lo, 0, field => 5); 
-                    write(Lo, 0, field => 5); 
-                    write(Lo, 0, field => 5); 
+                    write(Lo, 0, field => 9); 
+                    write(Lo, 0, field => 9); 
+                    write(Lo, 0, field => 9); 
+                    write(Lo, 0, field => 9); 
                 else
-                    write(Lo, to_integer(tracks_out(i).pt  ),   field => 5); 
-                    write(Lo, to_integer(tracks_out(i).eta ),   field => 5); 
-                    write(Lo, to_integer(tracks_out(i).phi ),   field => 5); 
-                    write(Lo, to_integer(tracks_out(i).rest),   field => 5); 
+                    write(Lo, to_integer(tracks_out(i).pt  ),   field => 9); 
+                    write(Lo, to_integer(tracks_out(i).eta ),   field => 9); 
+                    write(Lo, to_integer(tracks_out(i).phi ),   field => 9); 
+                    write(Lo, to_integer(tracks_out(i).rest),   field => 9); 
                 end if;
             end loop;
             writeline(Fo, Lo);

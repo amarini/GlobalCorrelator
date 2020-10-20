@@ -8,6 +8,7 @@ foreach slice ${slices} funcname ${funcs} {
     set_top ${hlsTopFunc}
 
     add_files src/phi_regionizer.cpp -cflags "-std=c++0x -DROUTER_M2"
+    add_files -tb phi_regionizer_ref.cpp -cflags "-std=c++0x -DROUTER_M2"
     add_files -tb phi_regionizer_test.cpp -cflags "-std=c++0x -DROUTER_M2"
 
     open_solution -reset "solution"
