@@ -26,13 +26,13 @@ int main(int argc, char **argv) {
     FILE *fin_emp = fopen("input-emp.txt", "w");
     
 
-    int frame = 0; 
-    const int latency = ALGO_LATENCY;
+    int frame = 0; int pingpong = 1; 
+    int latency = -1;
 
     bool ok = true, break_next = false;
     for (int itest = 0; itest < 10000; ++itest) {
         std::vector<Track> inputs[NSECTORS][NFIBERS];
-        Track output[NOUTLINKS][TLEN], output_ref[NOUTLINKS][TLEN];
+        Track output[NOUTLINKS][TLEN], output_ref[NOUTLINKS][2*TLEN];
 
         if (!readEvent(fMC, inputs)) break;
 
@@ -103,6 +103,43 @@ int main(int argc, char **argv) {
                 for (int r = 0; r < NOUTLINKS && r < 6; ++r) printTrackShort(stdout, links_out[r]);
                 fprintf(stdout, "\n"); fflush(stdout);
             }
+
+#ifdef NO_VALIDATE
+            continue;
+#endif
+            // begin validation
+            if (newev_ref) { 
+                pingpong = 1-pingpong;
+                for (int r = 0; r < NCALOOUT; ++r) for (int k = 0; k < TLEN; ++k) clear(output_ref[r][TLEN*pingpong+k]);
+            }
+            for (int r = 0; r < NCALOOUT; ++r) { 
+                output_ref[r][TLEN*pingpong+i] = links_ref[r];
+            }
+            if (newev_out) {
+                if (latency == -1) { latency = i; printf("Detected latency = %d\n", latency); } 
+                if (i != latency) { printf("ERROR in latency\n"); ok = false; break; }
+                if (itest > 1) { 
+                    for (int r = 0; r < NCALOOUT; ++r) {
+                        for (int k = 0; k < TLEN; ++k) {
+                            if (!(output[r][k] == output_ref[r][TLEN*(1-pingpong)+k]))   {
+                                printf("ERROR in region %d, object %d: expected ", r, k);
+                                printTrack(stdout, output_ref[r][TLEN*(1-pingpong)+k]);
+                                printf("   found "); 
+                                printTrack(stdout, output[r][k]);
+                                printf("\n");
+                                ok = false; break; 
+                            }
+                        }
+                    }
+                    if (!ok) break; 
+                }
+                for (int r = 0; r < NCALOOUT; ++r) for (int k = 0; k < TLEN; ++k) clear(output[r][k]);
+            }
+            if (frame >= latency) {
+                for (int r = 0; r < NCALOOUT; ++r) output[r][(frame-latency) % TLEN] = links_out[r];
+            }
+            // end validation
+
 
         }
         if (!ok) break;

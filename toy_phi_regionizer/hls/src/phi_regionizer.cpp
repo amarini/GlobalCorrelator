@@ -1083,7 +1083,7 @@ void calo_router_merge4_slice(const Track merged2_out[NCALOSECTORS][NCALOFIFOS/2
 
 void calo_router_merge_slice(const Track merged4_out[NCALOSECTORS][NCALOFIFOS/4], const bool merged4_out_valid[NCALOSECTORS][NCALOFIFOS/4], const bool merged4_out_roll[NCALOSECTORS][NCALOFIFOS/4],
         bool merged4_full[NCALOSECTORS][NCALOFIFOS/4],
-        Track merged_out[NCALOSECTORS], bool merged_out_valid[NCALOSECTORS], bool merged_out_roll[NCALOSECTORS])
+        Track merged_out[NSECTORS], bool merged_out_valid[NSECTORS], bool merged_out_roll[NSECTORS])
 {
     #pragma HLS pipeline II=1 
     #pragma HLS latency min=1 max=1

@@ -77,6 +77,7 @@ inline Track shiftedTrack(const Track & t, int phi_shift) {
     #define ALGO_LATENCY 2
 #elif defined(ROUTER_M2)
     #define NOUTLINKS NSECTORS*(NFIFOS/2)
+    #define NCALOOUT (NCALOSECTORS*NCALOFIFOS)/2 // not really used
     #define ALGO_LATENCY 4
 #else
     #define NOUTLINKS NSECTORS
