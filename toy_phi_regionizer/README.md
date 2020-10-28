@@ -56,4 +56,4 @@ There is also the possibility of reading in dump files made from fullSim MC, see
 
 ### HGCal regionizer
 
-An implementation of the HGCal regionizer up to the mux stage is also provided. This assumes 3 phi sectors, sending 4 objects / sector / clock cycle (as expected for 4 fibers / sector with 16G links and 128b objects). The "nomerge" and full merge mode are both implemented, in HLS and VHDL.
+An implementation of the HGCal regionizer up to the mux stage is also provided. This assumes 3 phi sectors, sending 4 objects / sector / clock cycle (as expected for 4 fibers / sector with 16G links and 128b objects). The "nomerge" and full merge mode are both implemented, in HLS and VHDL (for the HLS, the synthesis is done in slices, as per the tracker regionizer).

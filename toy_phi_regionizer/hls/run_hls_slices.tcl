@@ -19,7 +19,7 @@ foreach slice ${slices} funcname ${funcs} {
 
     csim_design
     csynth_design
-    cosim_design -trace_level all
+    #cosim_design -trace_level all
     #export_design -format ip_catalog -vendor "cern-cms" -version ${hlsIPVersion} -description ${hlsTopFunc}
 }
 
