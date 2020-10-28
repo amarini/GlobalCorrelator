@@ -7,10 +7,10 @@ if [[ "$1" == "hls_nomerge" ]]; then
     VHDLS="<IMPL>/route_link2fifo.vhd <IMPL>/router_nomerge_fifos_data_V_0.vhd <IMPL>/router_nomerge.vhd phi_regionizer_nomerge_tb.vhd"
     HLSPROJ="project_nomerge"
 elif [[ "$1" == "vhdl_nomerge" ]]; then
-    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/phi_regionizer_nomerge.vhd phi_regionizer_nomerge_vhdl_tb.vhd"
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/tk_router_element.vhd ${FW}/tk_router.vhd ${FW}/rolling_fifo.vhd ${FW}/phi_regionizer_nomerge.vhd phi_regionizer_nomerge_vhdl_tb.vhd"
     HLSPROJ="project_nomerge"
 elif [[ "$1" == "vhdl_m2" ]]; then
-    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/tk_router_element.vhd ${FW}/tk_router.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/phi_regionizer_m2.vhd phi_regionizer_m2_vhdl_tb.vhd"
     HLSPROJ="project_m2_input"
 elif [[ "$1" == "hls_m2_slices" ]]; then
     VHDLS="$VHDLS project_m2_input/solution/syn/vhdl/route_link2fifo.vhd  project_m2_input/solution/syn/vhdl/router_input_slice.vhd"
@@ -28,14 +28,20 @@ elif [[ "$1" == "hls_slices" ]]; then
     VHDLS="$VHDLS ${FW}/regionizer_data_stdlogic.vhd ${FW}/phi_regionizer_hls_slices.vhd phi_regionizer_hls_tb.vhd"
     HLSPROJ="project_full_input"
 elif [[ "$1" == "vhdl" ]]; then
-    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/phi_regionizer.vhd phi_regionizer_vhdl_tb.vhd"
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/tk_router_element.vhd ${FW}/tk_router.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/phi_regionizer.vhd phi_regionizer_vhdl_tb.vhd"
     HLSPROJ="project"
 elif [[ "$1" == "vhdl_sort" ]]; then
-    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/phi_regionizer_sort.vhd phi_regionizer_sorted_vhdl_tb.vhd"
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/tk_router_element.vhd ${FW}/tk_router.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/phi_regionizer_sort.vhd phi_regionizer_sorted_vhdl_tb.vhd"
     HLSPROJ="project_mux"
 elif [[ "$1" == "vhdl_mux" ]]; then
-    VHDLS="${FW}/regionizer_data.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/region_mux_stream.vhd ${FW}/phi_regionizer_mux.vhd phi_regionizer_mux_vhdl_tb.vhd"
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/tk_router_element.vhd ${FW}/tk_router.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2_full.vhd ${FW}/fifo_merge3.vhd ${FW}/stream_sort.vhd ${FW}/region_mux_stream.vhd ${FW}/phi_regionizer_mux.vhd phi_regionizer_mux_vhdl_tb.vhd"
     HLSPROJ="project_mux"
+elif [[ "$1" == "calo_vhdl_nomerge" ]]; then
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/calo_router.vhd ${FW}/rolling_fifo.vhd ${FW}/calo_phi_regionizer_nomerge.vhd calo_phi_regionizer_nomerge_vhdl_tb.vhd"
+    HLSPROJ="project_nomergeMC_calo"
+elif [[ "$1" == "calo_vhdl" ]]; then
+    VHDLS="${FW}/regionizer_data.vhd ${FW}/calo_router.vhd ${FW}/rolling_fifo.vhd ${FW}/fifo_merge2.vhd ${FW}/fifo_merge2_full.vhd ${FW}/calo_phi_regionizer.vhd calo_phi_regionizer_vhdl_tb.vhd"
+    HLSPROJ="project_MC_calo"
 fi
 
 

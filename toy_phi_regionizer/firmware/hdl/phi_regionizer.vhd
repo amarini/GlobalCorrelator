@@ -179,6 +179,15 @@ architecture Behavioral of regionizer is
 
 begin
 
+    router : entity work.tk_router 
+                port map(ap_clk => ap_clk, 
+                             enabled => ap_start,
+                             newevent => newevent,
+                             links_in => links_in,
+                             fifo_in => fifo_in,
+                             fifo_in_write => fifo_in_write,
+                             fifo_in_roll  => fifo_in_roll);
+
     gen_fifos: for ireg in NALLFIFOS-1 downto 0 generate
         reg_buffer : entity work.rolling_fifo
                         --generic map(FIFO_INDEX => ireg+1)
@@ -306,61 +315,6 @@ begin
     links_in(15).rest <= unsigned(tracks_in_7_1_rest_V);
     links_in(16).rest <= unsigned(tracks_in_8_0_rest_V);
     links_in(17).rest <= unsigned(tracks_in_8_1_rest_V);
-
-
-    link2fifo : process(ap_clk)
-        variable isec_next, isec_prev : integer range 0 to NSECTORS-1;
-        variable link_this, link_next, link_prev : std_logic;
-    begin
-        if rising_edge(ap_clk) then
-            for isec in 0 to NSECTORS-1 loop
-                if isec = 0 then
-                    isec_next := isec + 1;
-                    isec_prev := NSECTORS-1;
-                elsif isec = NSECTORS-1 then
-                    isec_next := 0;
-                    isec_prev := isec - 1;
-                else
-                    isec_next := isec + 1;
-                    isec_prev := isec - 1;
-                end if;
-                for ifib in 0 to NFIBERS-1 loop
-                    if ap_start = '0' or links_in(isec*NFIBERS+ifib).pt = 0 then
-                        link_this := '0';
-                        link_prev := '0';
-                        link_next := '0';
-                    else
-                        link_this := '1';
-                        if links_in(isec*NFIBERS+ifib).phi > 0 then
-                            link_prev := '0';
-                            link_next := '1';
-                        elsif links_in(isec*NFIBERS+ifib).phi < 0 then
-                            link_prev := '1';
-                            link_next := '0';
-                        else
-                            link_prev := '0';
-                            link_next := '0';
-                        end if;
-                    end if;
-                    fifo_in(isec     *NFIFOS+ifib  ) <= links_in(isec*NFIBERS+ifib);
-                    fifo_in(isec_next*NFIFOS+ifib+2).pt   <= links_in(isec*NFIBERS+ifib).pt;
-                    fifo_in(isec_next*NFIFOS+ifib+2).eta  <= links_in(isec*NFIBERS+ifib).eta;
-                    fifo_in(isec_next*NFIFOS+ifib+2).phi  <= links_in(isec*NFIBERS+ifib).phi - PHI_SHIFT;
-                    fifo_in(isec_next*NFIFOS+ifib+2).rest <= links_in(isec*NFIBERS+ifib).rest;
-                    fifo_in(isec_prev*NFIFOS+ifib+4).pt   <= links_in(isec*NFIBERS+ifib).pt;
-                    fifo_in(isec_prev*NFIFOS+ifib+4).eta  <= links_in(isec*NFIBERS+ifib).eta;
-                    fifo_in(isec_prev*NFIFOS+ifib+4).phi  <= links_in(isec*NFIBERS+ifib).phi + PHI_SHIFT;
-                    fifo_in(isec_prev*NFIFOS+ifib+4).rest <= links_in(isec*NFIBERS+ifib).rest;
-                    fifo_in_write(isec     *NFIFOS+ifib  ) <= link_this;
-                    fifo_in_write(isec_next*NFIFOS+ifib+2) <= link_next;
-                    fifo_in_write(isec_prev*NFIFOS+ifib+4) <= link_prev;
-                    fifo_in_roll(isec     *NFIFOS+ifib  ) <= newevent;
-                    fifo_in_roll(isec_next*NFIFOS+ifib+2) <= newevent;
-                    fifo_in_roll(isec_prev*NFIFOS+ifib+4) <= newevent;
-                end loop;
-            end loop;
-        end if;
-    end process link2fifo;
 
     merged_to_regions : process(ap_clk)
     begin

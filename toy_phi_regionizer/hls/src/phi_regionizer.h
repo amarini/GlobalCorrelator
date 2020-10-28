@@ -34,6 +34,12 @@ inline Track unpackTrack(const ap_uint<64> & word) {
     return ret;
 }
 
+inline Track shiftedTrack(const Track & t, int phi_shift) {
+    #pragma HLS inline
+    Track ret = t;
+    ret.phi = ap_int<12>(t.phi.to_int() + phi_shift);
+    return ret;
+}
 
 
 //#define REGIONIZER_SMALL
@@ -53,21 +59,33 @@ inline Track unpackTrack(const ap_uint<64> & word) {
 #define NPFSTREAMS ((NSORTED+PFLOWII-1)/PFLOWII)
 #define NREGIONS NSECTORS
 
+#define NCALOSECTORS 3
+#define NCALOFIBERS 4
+#define NCALOFIFOS0 4
+#define NCALOFIFOS12 8
+#define NCALOFIFOS (NCALOFIFOS0+2*NCALOFIFOS12)
+#define NCALOSORTED  20
+#define NCALOPFSTREAMS ((NCALOSORTED+PFLOWII-1)/PFLOWII)
+
 #ifdef ROUTER_MUX
     #define NOUTLINKS NPFSTREAMS
+    #define NCALOOUT NCALOPFSTREAMS
     #define ALGO_LATENCY 3
 #elif defined(ROUTER_NOMERGE)
     #define NOUTLINKS NSECTORS*NFIFOS
+    #define NCALOOUT (NCALOSECTORS*NCALOFIFOS)
     #define ALGO_LATENCY 2
 #elif defined(ROUTER_M2)
     #define NOUTLINKS NSECTORS*(NFIFOS/2)
     #define ALGO_LATENCY 4
 #else
     #define NOUTLINKS NSECTORS
+    #define NCALOOUT NREGIONS
     #define ALGO_LATENCY 5
 #endif
 
 #define PHI_SHIFT 160 // size of a phi sector (in L1PF units, LSB = 0.25 degrees)
+#define PHI_BORDER 58 // size of the phi border of a PF region (0.25 rad = 58, 0.30 rad = 69)
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out);
 void router_nomerge(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
@@ -76,13 +94,16 @@ void router_full(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track 
 //void router_full_d(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out, Track debug_out[NSECTORS*(NFIFOS+NFIFOS/2)], ap_uint<8> debug_flags[NSECTORS*(NFIFOS+NFIFOS/2)]);
 void router_mux(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NOUTLINKS], bool & newevent_out);
 
+void calo_router_nomerge(bool newevent, const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track tracks_out[NCALOSECTORS*NCALOFIFOS], bool & newevent_out) ;
+void calo_router_full(bool newevent, const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track tracks_out[NCALOOUT], bool & newevent_out) ;
+
 void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out);
 
 #ifndef __SYNTHESIS__
 #include <cstdio>
 
 inline void printTrack(FILE *f, const Track & t) { 
-    fprintf(f,"%3d % 4d % 4d %4d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int()); // note no leading +'s or 0's, they confuse VHDL text parser
+    fprintf(f,"%3d % 4d % 4d %7d  ", t.pt.to_int(), t.eta.to_int(), t.phi.to_int(), t.rest.to_int()); // note no leading +'s or 0's, they confuse VHDL text parser
 }
 inline void printTrackShort(FILE *f, const Track & t) { 
     int shortphi = 0;
@@ -97,6 +118,10 @@ inline void printTrackShort(FILE *f, const Track & t) {
     //fprintf(f,"%3d %+2d %02d  ", t.pt.to_int(), shortphi, t.rest.to_int());
     fprintf(f,"%3d.%04d ", t.pt.to_int(), t.rest.to_int());
 }
+inline void printCaloShort(FILE *f, const Track & t) { 
+    fprintf(f,"%3d%+04d ", t.pt.to_int(), t.phi.to_int());
+}
+
 #endif
 
 #endif

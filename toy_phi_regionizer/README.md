@@ -31,6 +31,7 @@ The idea is that the N/II streams will be sent to dual-clock FIFOs in order to p
    * working reference c++ implementation in the HLS testbench
    * VHDL native implementation passes standalone behavioural simulation in VHDL and passes synthesis & implementation (incl. timing) as emp payload
    * HLS implementation in one go doesn't work (Vivado can't understand the dependency of the data flow), but a version in which separate slices are implemented as separate IP cores of latency=1 and II=1 works (passes HLS synthesis for all modules, and standalone behavioural simulation in VHDL)
+
  * "mux" mode:
    * working reference c++ implementation in the HLS testbench
    * VHDL native implementation passes standalone behavioural simulation in VHDL, and synthesis & implementation (incl. timing) as emp payload. The resource usage for the EMP payload is 23.4k LUTs (2%), 42.2k FFs (1.9%), 54 BRAM36 (2.5%), where the percentage are for the total of the VU9P.
@@ -48,3 +49,11 @@ bash scrips/buildFirmware.sh toy_phi_regionizer a
 bash scrips/buildFirmware.sh toy_phi_regionizer resource-usage
 ````
 
+## Additonal developments:
+
+### Reading in dumpFiles from fullsim MC
+There is also the possibility of reading in dump files made from fullSim MC, see the `hls/readMC.cc` file.
+
+### HGCal regionizer
+
+An implementation of the HGCal regionizer up to the mux stage is also provided. This assumes 3 phi sectors, sending 4 objects / sector / clock cycle (as expected for 4 fibers / sector with 16G links and 128b objects). The "nomerge" and full merge mode are both implemented, in HLS and VHDL.

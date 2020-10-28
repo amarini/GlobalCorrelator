@@ -43,3 +43,42 @@ bool readEvent(FILE *file, std::vector<Track> inputs[NSECTORS][NFIBERS]) {
 }
 
 
+bool readEventCalo(FILE *file, std::vector<Track> inputs[NCALOSECTORS][NCALOFIBERS], bool zside) {
+    if (feof(file)) return false;
+
+    uint32_t run, lumi; uint64_t event;
+    if (fscanf(file, "event %u %u %lu\n", &run, &lumi, &event) != 3) return false;
+    //printf("reading event  %u %u %lu\n", run, lumi, event);
+
+    for (int s = 0; s < NCALOSECTORS; ++s) {
+        for (int f = 0; f < NCALOFIBERS; ++f) inputs[s][f].clear();
+    }
+
+    int nfound = 0, maxfib = 0, maxsec = 0;
+    for (int s = 0; s < 2*NCALOSECTORS; ++s) {
+        int zs, sec; uint64_t nclusters;
+        if (fscanf(file, "zside %d sector %d cluster %lu\n", &zs, &sec, &nclusters) != 3) return false;
+        //printf("reading zside %d sector %d -> %d clusters\n", zs, sec, int(nclusters));
+        for (int i = 0, n = nclusters; i < n; ++i) {
+            int hwPt, hwEta, hwPhi, hwPtErr, hwEmPt, hwIsEM;
+            int ret = fscanf(file, "cluster ipt %d ieta %d iphi %d iempt %d ipterr %d isem %1d\n",
+                                &hwPt, &hwEta, &hwPhi, &hwEmPt, &hwPtErr, &hwIsEM);
+            if (ret != 6) return false;
+            if (zs == zside) {
+                Track t;
+                t.pt = hwPt; t.eta = hwEta; t.phi = hwPhi;
+                t.rest[0] = hwIsEM;
+                t.rest(11, 1) = ap_uint<11>(hwPtErr);
+                t.rest(25,12) = ap_uint<14>(hwEmPt);
+                inputs[sec][i % NCALOFIBERS].push_back(t);
+                nfound++;
+                maxfib = std::max<int>(maxfib, inputs[sec][i % NCALOFIBERS].size());
+            }
+        }
+        maxsec = std::max<int>(maxsec, nclusters);
+    }
+    printf("read %d clusters for this event. max %d clusters/sector, %d clusters/fiber\n", nfound, maxsec, maxfib);
+    return true;
+}
+
+

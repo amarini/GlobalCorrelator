@@ -388,10 +388,28 @@ void fifo_merge3::update(bool roll,
 void route_link2fifo(const Track & in, Track & center, bool & write_center, Track & after, bool & write_after, Track & before, bool & write_before) {
     #pragma HSL inline
     bool valid = (in.pt != 0);
+    bool in_next = in.phi >= +(PHI_SHIFT/2-PHI_BORDER);
+    bool in_prev = in.phi <= -(PHI_SHIFT/2-PHI_BORDER);
     write_center = valid;                 center = in; 
-    write_after  = valid && (in.phi > 0);  after = in; after.phi  -= PHI_SHIFT; 
-    write_before = valid && (in.phi < 0); before = in; before.phi += PHI_SHIFT;
+    write_after  = valid && (in_next);  after = in; after.phi  -= PHI_SHIFT; 
+    write_before = valid && (in_prev); before = in; before.phi += PHI_SHIFT;
 }
+
+#if 0
+void route_link2fifo_packed(const ap_uint<64> & in, const bool valid, ap_uint<64> & center, bool & write_center, ap_uint<64> & after, bool & write_after, ap_uint<64> & before, bool & write_before) {
+    #pragma HSL pipeline II=1
+    Track tin = unpackTrack(in);
+    Track tcenter = tin; 
+    Track tafter  = tin;  tafter.phi -= PHI_SHIFT; 
+    Track tbefore = tin; tbefore.phi += PHI_SHIFT;
+    write_center = tvalid;                  
+    write_after  = tvalid && (tin.phi > 0);  
+    write_before = tvalid && (tin.phi < 0); 
+    center = packTrack(tcenter);
+    before = packTrack(tbefore);
+    after  = packTrack(tafter);
+}
+#endif
 
 void route_all_sectors(const Track tracks_in[NSECTORS][NFIBERS], Track fifo_in[NSECTORS][NFIFOS], bool fifo_write[NSECTORS][NFIFOS]) {
     #pragma HLS inline
@@ -800,88 +818,6 @@ void router_full(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track 
 
 void router_monolythic(bool newevent, const Track tracks_in[NSECTORS][NFIBERS], Track tracks_out[NSECTORS], bool & newevent_out)
 {
-#if 0
-    #pragma HLS pipeline II=1 enable_flush
-    #pragma HLS array_partition variable=tracks_in  complete dim=0
-    #pragma HLS array_partition variable=tracks_out complete
-
-    Track fifo_in[NSECTORS][NFIFOS];
-    static Track fifo_out[NSECTORS][NFIFOS];
-    static bool valid_out[NSECTORS][NFIFOS], full[NSECTORS][NFIFOS];
-    #pragma HLS array_partition variable=fifo_in  complete dim=0
-    #pragma HLS array_partition variable=fifo_out complete dim=0
-    #pragma HLS array_partition variable=valid_out complete dim=0
-    #pragma HLS array_partition variable=was_read  complete dim=0
-
-    static Track tmp_out[NSECTORS][NFIFOS/2];
-    static bool valid_tmp[NSECTORS][NFIFOS/2], was_read_tmp[NSECTORS][NFIFOS/2];
-    static bool newevent_out_del = false;
-    #pragma HLS array_partition variable=tmp_out complete dim=0
-    #pragma HLS array_partition variable=valid_tmp complete dim=0
-    #pragma HLS array_partition variable=was_read_tmp  complete dim=0
-
-    static bool roll_out[NSECTORS][NFIFOS];
-    #pragma HLS array_partition variable=roll_out complete dim=0
-
-    static rolling_ram_fifo fifos[NSECTORS*NFIFOS];
-    #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
-
-
-    route_all_sectors(tracks_in, fifo_in);
-
-    for (int i = 0; i < NSECTORS; ++i) {
-        #pragma HLS unroll
-
-        reduce_3(tmp_out[i][0],   tmp_out[i][1],   tmp_out[i][2],
-                 valid_tmp[i][0], valid_tmp[i][1], valid_tmp[i][2],
-                 tracks_out[i],
-                 was_read_tmp[i][0], was_read_tmp[i][1], was_read_tmp[i][2]);
-#ifndef __SYNTHESIS__
-        /*if (i == 1) {
-            fprintf(stderr,"\nsector %d 3-queue: valid %1d %1d %1d  tracks ", i, int(valid_tmp[i][0]), int(valid_tmp[i][1]), int(valid_tmp[i][2])); 
-            printTrackShort(stderr,tmp_out[i][0]); printTrackShort(stderr,tmp_out[i][1]); printTrackShort(stderr,tmp_out[i][2]);
-            fprintf(stderr,"  --> track "); 
-            printTrackShort(stderr,tracks_out[i]);
-            fprintf(stderr,"  read %1d %1d %1d\n", int(was_read_tmp[i][0]), int(was_read_tmp[i][1]), int(was_read_tmp[i][2])); 
-            
-        }*/
-#endif
-
-        for (int j = 0; j < NFIFOS/2; j++) {
-            bool read = roll_out[i][j*2] || was_read_tmp[i][j] || !valid_tmp[i][j];
-            reduce_2(read,
-                     fifo_out[i][j*2], fifo_out[i][j*2+1], 
-                     valid_out[i][j*2], valid_out[i][j*2+1],
-                     tmp_out[i][j],
-                     valid_tmp[i][j],
-                     was_read[i][j*2], was_read[i][j*2+1]);
-
-#ifndef __SYNTHESIS__
-            /*if (i == 1) {
-                fprintf(stderr,"sector %d 2-queue %d: read %1d valid %1d %1d  tracks ", i, j, int(read), int(valid_out[i][2*j]), int(valid_out[i][2*j+1])); 
-                printTrackShort(stderr,fifo_out[i][2*j]);
-                printTrackShort(stderr,fifo_out[i][2*j+1]);
-                fprintf(stderr,"  --> valid %1d track ", int(valid_tmp[i][j])); 
-                printTrackShort(stderr,tmp_out[i][j]);
-                fprintf(stderr,"  read %1d %1d\n", int(was_read[i][j*2]), int(was_read[i][j*2+1])); 
-                
-            }*/
-#endif
-        }
-
-    }
-
-    newevent_out = newevent_out_del;
-    newevent_out_del = roll_out[0][0];
-
-    for (int i = 0; i < NSECTORS; ++i) {
-        #pragma HLS unroll
-        for (int j = 0; j < NFIFOS; ++j) {
-            #pragma HLS unroll
-            fifos[i*NFIFOS+j].update(newevent, fifo_in[i][j], fifo_out[i][j], valid_out[i][j], was_read[i][j], roll_out[i][j]);
-        }
-    }
-#endif
 }
 
 void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTORS][NFIBERS], ap_uint<64> tracks_out[NSECTORS], bool & newevent_out) 
@@ -911,6 +847,385 @@ void wrapped_router_monolythic(bool newevent, const ap_uint<64> tracks_in[NSECTO
     }
     newevent_out = unpacked_newevent_out;
 }
+
+
+void calo_route_all_sectors(const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track fifo_in[NCALOSECTORS][NCALOFIFOS], bool fifo_write[NCALOSECTORS][NCALOFIFOS]) {
+    #pragma HLS inline
+    #pragma HLS array_partition variable=tracks_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
+    #pragma HLS interface ap_none port=fifo_in
+    #pragma HLS interface ap_none port=fifo_write
+
+    for (int isec = 0; isec < NCALOSECTORS; ++isec) {
+        #pragma HLS unroll
+        int inxt = (isec == NCALOSECTORS-1 ? 0 : isec + 1);
+        // first
+        for (int ifib = 0, iout = 0*NCALOFIBERS; ifib < NCALOFIBERS; ++ifib, ++iout) {
+            #pragma HLS unroll
+            fifo_in[isec][iout]    = tracks_in[isec][ifib];
+            fifo_write[isec][iout] = tracks_in[isec][ifib].pt  != 0 && 
+                                     tracks_in[isec][ifib].phi <= +(PHI_SHIFT/2 + PHI_BORDER) && 
+                                     tracks_in[isec][ifib].phi >= -(PHI_SHIFT/2 + PHI_BORDER);
+            //if (isec == 0 && ifib == 0) printf("Sector %d, Fiber %d: got pt %d, write %d\n", isec, ifib, tracks_in[isec][ifib].pt.to_int(), int(fifo_write[isec][iout]));
+        }
+        // second, from same
+        for (int ifib = 0, iout = 1*NCALOFIBERS; ifib < NCALOFIBERS; ++ifib, ++iout) {
+            #pragma HLS unroll
+            fifo_in[isec][iout]    = shiftedTrack(tracks_in[isec][ifib], -PHI_SHIFT);
+            fifo_write[isec][iout] = tracks_in[isec][ifib].pt  != 0 && 
+                                     tracks_in[isec][ifib].phi >= +(PHI_SHIFT/2 - PHI_BORDER);
+        }
+        // second, from next
+        for (int ifib = 0, iout = 2*NCALOFIBERS; ifib < NCALOFIBERS; ++ifib, ++iout) {
+            #pragma HLS unroll
+            fifo_in[isec][iout]    = shiftedTrack(tracks_in[inxt][ifib], 2*PHI_SHIFT);
+            fifo_write[isec][iout] = tracks_in[inxt][ifib].pt  != 0 && 
+                                     tracks_in[inxt][ifib].phi <= -(3*PHI_SHIFT/2 - PHI_BORDER);
+        }
+        // third, from same
+        for (int ifib = 0, iout = 3*NCALOFIBERS; ifib < NCALOFIBERS; ++ifib, ++iout) {
+            #pragma HLS unroll
+            fifo_in[isec][iout]    = shiftedTrack(tracks_in[isec][ifib], -2*PHI_SHIFT);
+            fifo_write[isec][iout] = tracks_in[isec][ifib].pt  != 0 && 
+                                     tracks_in[isec][ifib].phi >= +(3*PHI_SHIFT/2 - PHI_BORDER);
+        }
+        // third, from next
+        for (int ifib = 0, iout = 4*NCALOFIBERS; ifib < NCALOFIBERS; ++ifib, ++iout) {
+            #pragma HLS unroll
+            fifo_in[isec][iout]    = shiftedTrack(tracks_in[inxt][ifib], PHI_SHIFT);
+            fifo_write[isec][iout] = tracks_in[inxt][ifib].pt  != 0 && 
+                                     tracks_in[inxt][ifib].phi <= -(PHI_SHIFT/2 - PHI_BORDER);
+        }
+
+
+    }
+}
+
+void calo_router_nomerge(bool newevent, const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track tracks_out[NCALOSECTORS*NCALOFIFOS], bool & newevent_out)
+{
+    #pragma HLS pipeline II=1 enable_flush
+    #pragma HLS array_partition variable=tracks_in  complete dim=0
+    #pragma HLS array_partition variable=tracks_out complete
+
+    Track fifo_in[NCALOSECTORS][NCALOFIFOS]; bool fifo_write[NCALOSECTORS][NCALOFIFOS];
+    Track fifo_out[NCALOSECTORS][NCALOFIFOS];
+    bool valid_out[NCALOSECTORS][NCALOFIFOS];
+    #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
+    #pragma HLS array_partition variable=fifo_out complete dim=0
+    #pragma HLS array_partition variable=valid_out complete dim=0
+
+    bool roll_out[NCALOSECTORS][NCALOFIFOS];
+    #pragma HLS array_partition variable=roll_out complete dim=0
+
+    static rolling_ram_fifo fifos[NCALOSECTORS*NCALOFIFOS];
+    #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
+
+    calo_route_all_sectors(tracks_in, fifo_in, fifo_write);
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        for (int j = 0; j < NCALOFIFOS; ++j) {
+            #pragma HLS unroll
+            //if (i == 0 && j == 0) printf("\non fifo[%d][%d] write %d, pt %4d\n", i, j, int(fifo_write[i][j]) , fifo_in[i][j].pt.to_int());
+            fifos[i*NCALOFIFOS+j].update(newevent, fifo_in[i][j], fifo_write[i][j], fifo_out[i][j], valid_out[i][j], false, roll_out[i][j]);
+            //if (i == 0 && j == 0) printf("\non fifo[%d][%d] out valid %d, pt %4d\n", i, j, int(valid_out[i][j]) , fifo_out[i][j].pt.to_int());
+        }
+    }
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        for (int j = 0; j < NCALOFIFOS; ++j) {
+            #pragma HLS unroll
+            if (valid_out[i][j]) {
+                tracks_out[i*NCALOFIFOS+j] = fifo_out[i][j];
+                //if (i == 0 && j == 0) printf("\notacks_out[%d] pt %4d\n", i*NCALOFIFOS+j, tracks_out[i*NCALOFIFOS+j].pt.to_int());
+            } else {
+                clear(tracks_out[i*NCALOFIFOS+j]);
+            }
+        }
+    }
+
+    newevent_out = roll_out[0][0];
+
+
+}
+
+void calo_router_input_slice(const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track fifo_in[NCALOSECTORS][NCALOFIFOS], bool fifo_write[NCALOSECTORS][NCALOFIFOS]) {
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+    #pragma HLS array_partition variable=tracks_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
+    #pragma HLS array_partition variable=fifo_in complete dim=0
+    #pragma HLS array_partition variable=fifo_write complete dim=0
+    //#pragma HLS interface ap_none port=fifo_in
+    //#pragma HLS interface ap_none port=fifo_write
+
+    calo_route_all_sectors(tracks_in, fifo_in, fifo_write);
+}
+
+void calo_router_fifo_slice(bool newevent, 
+                          const Track fifo_in[NCALOSECTORS][NCALOFIFOS], const bool fifo_write[NCALOSECTORS][NCALOFIFOS], const bool fifo_full[NCALOSECTORS][NCALOFIFOS],
+                          Track fifo_out[NCALOSECTORS][NCALOFIFOS], bool fifo_out_valid[NCALOSECTORS][NCALOFIFOS], bool fifo_out_roll[NCALOSECTORS][NCALOFIFOS])
+{
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+    #pragma HLS array_partition variable=fifo_in complete dim=0
+    #pragma HLS array_partition variable=fifo_write complete dim=0
+    #pragma HLS array_partition variable=fifo_full complete dim=0
+    #pragma HLS array_partition variable=fifo_out complete dim=0
+    #pragma HLS array_partition variable=fifo_out_valid complete dim=0
+    #pragma HLS array_partition variable=fifo_out_roll complete dim=0
+    //#pragma HLS interface ap_none port=fifo_out
+    //#pragma HLS interface ap_none port=fifo_out_valid
+    //#pragma HLS interface ap_none port=fifo_out_roll
+
+    static rolling_ram_fifo fifos[NCALOSECTORS*NCALOFIFOS];
+    #pragma HLS array_partition variable=fifos complete dim=1 // must be 1D array to avoid unrolling also the RAM
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        for (int j = 0; j < NCALOFIFOS; ++j) {
+            #pragma HLS unroll
+            fifos[i*NCALOFIFOS+j].update(newevent, fifo_in[i][j], fifo_write[i][j], fifo_out[i][j], fifo_out_valid[i][j], fifo_full[i][j], fifo_out_roll[i][j]);
+        }
+    }
+}
+
+void calo_router_merge2_slice(const Track fifo_out[NCALOSECTORS][NCALOFIFOS], const bool fifo_out_valid[NCALOSECTORS][NCALOFIFOS], const bool fifo_out_roll[NCALOSECTORS][NCALOFIFOS],
+        const bool merged_full[NCALOSECTORS][NCALOFIFOS/2],
+        bool fifo_full[NCALOSECTORS][NCALOFIFOS],
+        Track merged_out[NCALOSECTORS][NCALOFIFOS/2], bool merged_out_valid[NCALOSECTORS][NCALOFIFOS/2], bool merged_out_roll[NCALOSECTORS][NCALOFIFOS/2])
+{
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+
+    #pragma HLS array_partition variable=fifo_full complete dim=0
+    #pragma HLS array_partition variable=fifo_out complete dim=0
+    #pragma HLS array_partition variable=fifo_out_valid complete dim=0
+    #pragma HLS array_partition variable=fifo_out_roll complete dim=0
+    #pragma HLS array_partition variable=merged_out complete dim=0
+    #pragma HLS array_partition variable=merged_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged_out_roll  complete dim=0
+    #pragma HLS array_partition variable=merged_full  complete dim=0
+
+    //#pragma HLS interface ap_none port=fifo_full
+    //#pragma HLS interface ap_none port=merged_out
+    //#pragma HLS interface ap_none port=merged_out_valid
+    //#pragma HLS interface ap_none port=merged_out_roll
+
+    static fifo_merge2_full merger[NCALOSECTORS*NCALOFIFOS/2];
+    #pragma HLS array_partition variable=mergers complete dim=1 
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        for (int j = 0; j < NCALOFIFOS/2; ++j) {
+            //if (i == 0) merger[i*(NCALOFIFOS/2)+j].debug_ = j+1;
+            #pragma HLS unroll
+            merger[i*(NCALOFIFOS/2)+j].update(fifo_out_roll[i][2*j],
+                                          fifo_out[i][2*j], fifo_out[i][2*j+1], 
+                                          fifo_out_valid[i][2*j], fifo_out_valid[i][2*j+1], 
+                                          merged_full[i][j],  
+                                          merged_out[i][j], 
+                                          merged_out_valid[i][j],
+                                          fifo_full[i][2*j], fifo_full[i][2*j+1], 
+                                          merged_out_roll[i][j]);
+        }
+    }
+
+}
+
+void calo_router_merge4_slice(const Track merged2_out[NCALOSECTORS][NCALOFIFOS/2], const bool merged2_out_valid[NCALOSECTORS][NCALOFIFOS/2], const bool merged2_out_roll[NCALOSECTORS][NCALOFIFOS/2],
+        const bool merged_full[NCALOSECTORS][NCALOFIFOS/4],
+        bool merged2_full[NCALOSECTORS][NCALOFIFOS/2],
+        Track merged_out[NCALOSECTORS][NCALOFIFOS/4], bool merged_out_valid[NCALOSECTORS][NCALOFIFOS/4], bool merged_out_roll[NCALOSECTORS][NCALOFIFOS/4])
+{
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+
+    #pragma HLS array_partition variable=merged2_full complete dim=0
+    #pragma HLS array_partition variable=merged2_out complete dim=0
+    #pragma HLS array_partition variable=merged2_out_valid complete dim=0
+    #pragma HLS array_partition variable=merged2_out_roll complete dim=0
+    #pragma HLS array_partition variable=merged_out complete dim=0
+    #pragma HLS array_partition variable=merged_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged_out_roll  complete dim=0
+    #pragma HLS array_partition variable=merged_full  complete dim=0
+
+    //#pragma HLS interface ap_none port=merged2_full
+    //#pragma HLS interface ap_none port=merged_out
+    //#pragma HLS interface ap_none port=merged_out_valid
+    //#pragma HLS interface ap_none port=merged_out_roll
+
+    static fifo_merge2_full merger[NCALOSECTORS*NCALOFIFOS/4];
+    #pragma HLS array_partition variable=mergers complete dim=1 
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        for (int j = 0; j < NCALOFIFOS/4; ++j) {
+            //if (i == 0) merger[i*(NCALOFIFOS/2)+j].debug_ = j+1;
+            #pragma HLS unroll
+            merger[i*(NCALOFIFOS/4)+j].update(merged2_out_roll[i][2*j],
+                                          merged2_out[i][2*j], merged2_out[i][2*j+1], 
+                                          merged2_out_valid[i][2*j], merged2_out_valid[i][2*j+1], 
+                                          merged_full[i][j],  
+                                          merged_out[i][j], 
+                                          merged_out_valid[i][j],
+                                          merged2_full[i][2*j], merged2_full[i][2*j+1], 
+                                          merged_out_roll[i][j]);
+        }
+    }
+
+}
+
+
+void calo_router_merge_slice(const Track merged4_out[NCALOSECTORS][NCALOFIFOS/4], const bool merged4_out_valid[NCALOSECTORS][NCALOFIFOS/4], const bool merged4_out_roll[NCALOSECTORS][NCALOFIFOS/4],
+        bool merged4_full[NCALOSECTORS][NCALOFIFOS/4],
+        Track merged_out[NCALOSECTORS], bool merged_out_valid[NCALOSECTORS], bool merged_out_roll[NCALOSECTORS])
+{
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+
+    #pragma HLS array_partition variable=merged4_out complete dim=0
+    #pragma HLS array_partition variable=merged4_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged4_out_roll  complete dim=0
+    #pragma HLS array_partition variable=merged4_full  complete dim=0
+    #pragma HLS array_partition variable=merged_out complete dim=0
+    #pragma HLS array_partition variable=merged_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged_out_roll  complete dim=0
+
+    //#pragma HLS interface ap_none port=merged4_full
+    //#pragma HLS interface ap_none port=merged_out
+    //#pragma HLS interface ap_none port=merged_out_valid
+    //#pragma HLS interface ap_none port=merged_out_roll
+
+    static fifo_merge2 merger[NCALOSECTORS*2];
+    #pragma HLS array_partition variable=mergers complete dim=1 
+
+    for (int i = 0; i < NCALOSECTORS; ++i) {
+        #pragma HLS unroll
+        // region with no extra merge (4 -> 2 -> 1 -> 1)
+        merged_out[3*i+0]       = merged4_out[i][0];
+        merged_out_valid[3*i+0] = merged4_out_valid[i][0];
+        merged_out_roll[3*i+0]  = merged4_out_roll[i][0];
+        merged4_full[i][0] = false;
+        // two regions with extra merge ( 8 -> 4 -> 2 -> 1 )
+        for (int j = 0; j <= 1; ++j) {
+            #pragma HLS unroll
+            merger[2*i+j].update(merged4_out_roll[i][2*j+1],
+                                 merged4_out[i][2*j+1],       merged4_out[i][2*j+2], 
+                                 merged4_out_valid[i][2*j+1], merged4_out_valid[i][2*j+2], 
+                                 merged_out[3*i+j+1], 
+                                 merged_out_valid[3*i+j+1],
+                                 merged4_full[i][2*j+1],      merged4_full[i][2*j+2], 
+                                 merged_out_roll[3*i+j+1]);
+;
+        }
+    }
+}
+
+
+
+void calo_router_full_output_slice(const Track merged_out[NSECTORS], const bool merged_out_valid[NSECTORS], const bool merged_out_roll[NSECTORS],
+                            Track tracks_out[NCALOOUT], bool & newevent_out)
+{
+    #pragma HLS pipeline II=1 
+    #pragma HLS latency min=1 max=1
+
+    #pragma HLS array_partition variable=merged_out complete dim=0
+    #pragma HLS array_partition variable=merged_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged_out_roll  complete dim=0
+    #pragma HLS array_partition variable=tracks_out complete
+    //#pragma HLS interface ap_none port=tracks_out
+
+    for (int i = 0; i < NSECTORS; ++i) {
+        if (merged_out_valid[i]) {
+            tracks_out[i] = merged_out[i];
+        } else {
+            clear(tracks_out[i]);
+        }
+    }
+
+    newevent_out = merged_out_roll[0];
+}
+
+
+
+void calo_router_full(bool newevent, const Track tracks_in[NCALOSECTORS][NCALOFIBERS], Track tracks_out[NCALOOUT], bool & newevent_out) {
+    #pragma HLS pipeline II=1 enable_flush
+    #pragma HLS array_partition variable=tracks_in  complete dim=0
+    #pragma HLS array_partition variable=tracks_out complete
+    #pragma HLS interface ap_none port=tracks_out
+
+    static Track fifo_in[NCALOSECTORS][NCALOFIFOS]; static bool fifo_write[NCALOSECTORS][NCALOFIFOS], newevent_in;
+    static Track fifo_out[NCALOSECTORS][NCALOFIFOS], merged2_out[NCALOSECTORS][NCALOFIFOS/2], merged4_out[NCALOSECTORS][NCALOFIFOS/4], merged_out[NSECTORS];
+    static bool fifo_out_valid[NCALOSECTORS][NCALOFIFOS], fifo_full[NCALOSECTORS][NCALOFIFOS], fifo_out_roll[NCALOSECTORS][NCALOFIFOS];
+    static bool merged2_out_valid[NCALOSECTORS][NCALOFIFOS/2], merged2_full[NCALOSECTORS][NCALOFIFOS/2], merged2_out_roll[NCALOSECTORS][NCALOFIFOS/2];
+    static bool merged4_out_valid[NCALOSECTORS][NCALOFIFOS/4], merged4_full[NCALOSECTORS][NCALOFIFOS/4], merged4_out_roll[NCALOSECTORS][NCALOFIFOS/4];
+    static bool merged_out_valid[NSECTORS], merged_full[NSECTORS], merged_out_roll[NSECTORS];
+    #pragma HLS array_partition variable=fifo_in  complete dim=0
+    #pragma HLS array_partition variable=fifo_write  complete dim=0
+    #pragma HLS array_partition variable=fifo_full  complete dim=0§
+    #pragma HLS array_partition variable=fifo_out complete dim=0
+    #pragma HLS array_partition variable=fifo_out_valid complete dim=0
+    #pragma HLS array_partition variable=fifo_out_roll complete dim=0
+    #pragma HLS array_partition variable=merged2_out complete dim=0
+    #pragma HLS array_partition variable=merged2_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged2_out_roll complete dim=0
+    #pragma HLS array_partition variable=merged2_full  complete dim=0
+    #pragma HLS array_partition variable=merged4_out complete dim=0
+    #pragma HLS array_partition variable=merged4_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged4_out_roll complete dim=0
+    #pragma HLS array_partition variable=merged4_full  complete dim=0
+    #pragma HLS array_partition variable=merged_out complete dim=0
+    #pragma HLS array_partition variable=merged_out_valid  complete dim=0
+    #pragma HLS array_partition variable=merged_out_roll complete dim=0
+
+    bool fifo_full_new[NCALOSECTORS][NCALOFIFOS], merged2_full_new[NCALOSECTORS][NCALOFIFOS/2], merged4_full_new[NCALOSECTORS][NCALOFIFOS/4];
+    #pragma HLS array_partition variable=fifo_full_new  complete dim=0§
+    #pragma HLS array_partition variable=merged2_full_new  complete dim=0
+    #pragma HLS array_partition variable=merged4_full_new  complete dim=0
+
+    // all these layers must run in parallel taking as input the output from the previous
+    // clock cycle, that is saved in the static variables, and not anything new that is
+    // produced during this call of the function.
+    // because of this, I call them in reverse order, and write the new "full" flags into a new array,
+    // and copy that into the static at the end of this function
+    
+    calo_router_full_output_slice(merged_out, merged_out_valid, merged_out_roll, tracks_out, newevent_out);
+    calo_router_merge_slice(merged4_out, merged4_out_valid, merged4_out_roll, merged4_full_new, merged_out, merged_out_valid, merged_out_roll);
+    calo_router_merge4_slice(merged2_out, merged2_out_valid, merged2_out_roll, merged4_full, merged2_full_new, merged4_out, merged4_out_valid, merged4_out_roll);
+    calo_router_merge2_slice(fifo_out, fifo_out_valid, fifo_out_roll, merged2_full, fifo_full_new, merged2_out, merged2_out_valid, merged2_out_roll);
+    calo_router_fifo_slice(newevent_in, fifo_in, fifo_write, fifo_full, fifo_out, fifo_out_valid, fifo_out_roll);
+    calo_router_input_slice(tracks_in, fifo_in, fifo_write); newevent_in = newevent;
+
+
+    for (int is = 0, i = 0; is < NCALOSECTORS; ++is) {
+        for (int f = 0; f < NCALOFIFOS; ++f) fifo_full[is][f] = fifo_full_new[is][f];
+        for (int f = 0; f < NCALOFIFOS/2; ++f) merged2_full[is][f] = merged2_full_new[is][f];
+        for (int f = 0; f < NCALOFIFOS/4; ++f) merged4_full[is][f] = merged4_full_new[is][f];
+    }
+
+#if 0
+    for (int is = 0, i = 0; is < NSECTORS; ++is) {
+        for (int f = 0; f < NFIFOS; ++f, ++i) {
+            if (fifo_out_valid[is][f]) debug_out[i] = fifo_out[is][f]; else clear(debug_out[i]); 
+            debug_flags[i][0] = fifo_full[is][f];
+            debug_flags[i][1] = fifo_out_roll[is][f];
+        }
+        for (int f = 0; f < NFIFOS/2; ++f, ++i) {
+            if (merged_out_valid[is][f]) debug_out[i] = merged_out[is][f]; else clear(debug_out[i]); 
+            debug_flags[i][0] = merged_full[is][f];
+            debug_flags[i][1] = merged_out_roll[is][f];
+        }
+    }
+#endif
+}
+
+
+
 
 
 
