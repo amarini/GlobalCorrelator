@@ -49,7 +49,7 @@ architecture rtl of emp_payload is
         constant IPATTERN_PV       : natural := NPATTERNS_TK_IN+NPATTERNS_CALO_IN+NPATTERNS_MU_IN;
 
         constant NPFSTREAM360    : natural := (NPFTOT+PFII-1)/PFII;
-        constant NPUPPISTREAM360 : natural := (NPUPPI+PFII-1)/PFII;
+        constant NPUPPISTREAM360 : natural := (NPUPPIFINALSORTED+PFII-1)/PFII;
 
         constant N_OUT_REG   : natural := NTKSTREAM + NCALOSTREAM + NMUSTREAM;
         constant N_OUT_PF    : natural := NPFSTREAM360;
@@ -94,7 +94,7 @@ architecture rtl of emp_payload is
 
 
         -- Puppi: 360 MHz stuff
-        signal puppi_out  : w64s(NPUPPI - 1 downto 0);
+        signal puppi_out  : w64s(NPUPPIFINALSORTED - 1 downto 0);
         signal puppi_start, puppi_read, puppi_done, puppi_valid : STD_LOGIC;
         signal puppi_empty : STD_LOGIC_VECTOR(NTKSTREAM+NCALOSTREAM-1 downto 0);
         signal puppi_out_stream: w64s(NPUPPISTREAM360 - 1 downto 0);
@@ -115,7 +115,7 @@ begin
     end process export_rst240;
 
 
-    algo_payload : entity work.tdemux_regionizer_cdc_pf_puppi
+    algo_payload : entity work.tdemux_regionizer_cdc_pf_puppi_sort
         port map(clk => clk_p, clk240 => clk_payload(0), 
                  rst => '0', --rst_loc(0), 
                  rst240 => '0', --rst240, 
@@ -221,7 +221,7 @@ begin
     end generate;
 
     puppi_streamer : entity work.parallel2serial
-                generic map(NITEMS => NPUPPI, NSTREAM => NPUPPISTREAM360)
+                generic map(NITEMS => NPUPPIFINALSORTED, NSTREAM => NPUPPISTREAM360)
                 port map( ap_clk => clk_p,
                           roll   => puppi_done,
                           data_in  => puppi_out,
