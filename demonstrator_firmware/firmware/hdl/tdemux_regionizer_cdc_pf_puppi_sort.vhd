@@ -7,7 +7,7 @@ library pf;
 library utilities;
 use utilities.utilities;
 
-entity regionizer_mux_stream_cdc_pf_puppi is
+entity tdemux_regionizer_cdc_pf_puppi_sort is
     port(
             clk    : IN STD_LOGIC;
             clk240 : IN STD_LOGIC;
@@ -17,8 +17,19 @@ entity regionizer_mux_stream_cdc_pf_puppi is
             --ap_done : OUT STD_LOGIC;
             --ap_idle : OUT STD_LOGIC;
             --ap_ready : OUT STD_LOGIC;
-            links_in : IN w64s(NTKSECTORS*NTKFIBERS + NCALOSECTORS*NCALOFIBERS + NMUFIBERS downto 0);
-            valid_in : IN STD_LOGIC_VECTOR(NTKSECTORS*NTKFIBERS + NCALOSECTORS*NCALOFIBERS + NMUFIBERS downto 0);
+            tk_links_in : IN w64s(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS-1 downto 0);
+            tk_valid_in : IN STD_LOGIC_VECTOR(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS-1 downto 0);
+            calo_links_in : IN w64s(NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS-1 downto 0);
+            calo_valid_in : IN STD_LOGIC_VECTOR(NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS-1 downto 0);
+            mu_links_in : IN w64s(TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
+            mu_valid_in : IN STD_LOGIC_VECTOR(TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
+            vtx_link_in : IN word64;
+            vtx_valid_in : IN STD_LOGIC;
+            -- debug
+            demuxed_out : OUT w64s(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS+NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS+TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
+            demuxed_vld : OUT STD_LOGIC_VECTOR(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS+NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS+TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
+            --decoded_out : OUT w64s(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS+NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS+TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
+            --decoded_vld : OUT STD_LOGIC_VECTOR(NTKSECTORS*TDEMUX_FACTOR*TDEMUX_NTKFIBERS+NCALOSECTORS*TDEMUX_FACTOR*TDEMUX_NCALOFIBERS+TDEMUX_FACTOR*TDEMUX_NMUFIBERS-1 downto 0);
             -- 360 MHz clock regionizer 
             regionizer_out   : OUT w64s(NTKSTREAM+NCALOSTREAM+NMUSTREAM-1 downto 0);
             regionizer_done  : OUT STD_LOGIC; -- '1' for 1 clock at start of event
@@ -31,7 +42,7 @@ entity regionizer_mux_stream_cdc_pf_puppi is
             pf_valid : OUT STD_LOGIC;
             pf_empty : OUT STD_LOGIC_VECTOR(NPFSTREAM-1 downto 0);
             -- 360 MHz clock Puppi output
-            puppi_out   : OUT w64s(NPUPPI-1 downto 0);
+            puppi_out   : OUT w64s(NPUPPIFINALSORTED-1 downto 0);
             puppi_start : OUT STD_LOGIC;
             puppi_read  : OUT STD_LOGIC;
             puppi_done  : OUT STD_LOGIC;
@@ -39,10 +50,9 @@ entity regionizer_mux_stream_cdc_pf_puppi is
             puppi_empty : OUT STD_LOGIC_VECTOR(NTKSTREAM+NCALOSTREAM-1 downto 0)
     );
 
-end regionizer_mux_stream_cdc_pf_puppi;
+end tdemux_regionizer_cdc_pf_puppi_sort;
 
-architecture Behavioral of regionizer_mux_stream_cdc_pf_puppi is
-    constant PV_LINK  : natural := NTKSECTORS*NTKFIBERS + NCALOSECTORS*NCALOFIBERS + NMUFIBERS;
+architecture Behavioral of tdemux_regionizer_cdc_pf_puppi_sort is
     constant NREGIONIZER_OUT : natural := NTKSORTED + NCALOSORTED + NMUSORTED;
     constant NPUPPI   : natural := NTKSORTED+NCALOSORTED;
 
@@ -53,17 +63,13 @@ architecture Behavioral of regionizer_mux_stream_cdc_pf_puppi is
     constant LATENCY_PUPPICH : natural :=  1; -- at 240 MHz
     constant LATENCY_REGIONIZER : natural := 54+11;
 
-    signal input_was_valid, newevent, newevent_out : std_logic := '0';
-
-    signal tk_in:  w64s(NTKSECTORS*NTKFIBERS-1 downto 0) := (others => (others => '0'));
-    signal calo_in:  w64s(NCALOSECTORS*NCALOFIBERS-1 downto 0) := (others => (others => '0'));
-    signal mu_in:  w64s(NMUFIBERS-1 downto 0) := (others => (others => '0'));
+    signal tk_newevent_out, calo_newevent_out, mu_newevent_out : std_logic := '0';
 
     signal tk_out,   tk_in240,   tk_out240:   w64s(NTKSTREAM-1 downto 0) := (others => (others => '0'));
     signal calo_out, calo_in240, calo_out240: w64s(NCALOSTREAM-1 downto 0) := (others => (others => '0'));
     signal mu_out,   mu_in240,   mu_out240:   w64s(NMUSTREAM-1 downto 0) := (others => (others => '0'));
    
-    signal regionizer_start, regionizer_out_warmup, regionizer_out_write: std_logic := '0';
+    signal regionizer_out_warmup, regionizer_out_write: std_logic := '0';
     signal regionizer_count : natural range 0 to NCLK_WRITE360-1 := 0;
 
     signal tk_empty240  : std_logic_vector(NTKSTREAM-1 downto 0) := (others => '0');
@@ -86,9 +92,7 @@ architecture Behavioral of regionizer_mux_stream_cdc_pf_puppi is
     signal puppi_read360_start, puppi_read360, puppi_done360, puppi_decode360_warmup, puppi_decode360_start : std_logic := '0';
     signal puppi_read360_count : natural range 0 to PFII-1;
 
-    signal puppi_out360 : w64s(NTKSORTED+NCALOSORTED-1 downto 0) := (others => (others => '0'));
     signal puppi_out_unsorted : w64s(NPUPPI-1 downto 0) := (others => (others => '0'));
-    signal puppi_out_sorted : w64s(NPUPPI-1 downto 0) := (others => (others => '0'));
     signal puppi_start_unsorted : std_logic := '0';
     signal puppi_read_unsorted  : std_logic := '0';
     signal puppi_done_unsorted  : std_logic := '0';
@@ -106,31 +110,34 @@ architecture Behavioral of regionizer_mux_stream_cdc_pf_puppi is
     signal vtx240 : word64 := (others => '0'); 
     signal vtx_count360 : natural range 0 to NCLK_WRITE360-1 := 0;
 begin
-    
-    input_links: process(clk)
-    begin
-        if rising_edge(clk) then
-            -- for these we put some reset logic
-            if rst = '1' then
-                input_was_valid  <= '0';
-                regionizer_start <= '0';
-            else
-                input_was_valid  <= valid_in(0);
-                regionizer_start <= valid_in(0) or input_was_valid;
-            end if;
-            -- these run anyway
-            newevent <= valid_in(0) and not(input_was_valid);
-            for i in 0 to NTKSECTORS*NTKFIBERS-1 loop
-                tk_in(i) <= links_in(i);
-            end loop;
-            for i in 0 to NCALOSECTORS*NCALOFIBERS-1 loop
-                calo_in(i) <= links_in(i+NTKSECTORS*NTKFIBERS);
-            end loop;
-            for i in 0 to NMUFIBERS-1 loop
-                mu_in(i) <= links_in(i+NTKSECTORS*NTKFIBERS+NCALOSECTORS*NCALOFIBERS);
-            end loop;
-        end if;
-    end process input_links;
+
+    tk_tdemux_decode_regionizer : entity work.tracker_tdemux_decode_regionizer
+                   port map(
+                        clk => clk,
+                        rst => rst,
+                        links_in => tk_links_in,
+                        valid_in => tk_valid_in,
+                        tk_out => tk_out,
+                        newevent_out => tk_newevent_out);
+
+    calo_tdemux_decode_regionizer : entity work.hgcal_tdemux_decode_regionizer
+                   port map(
+                        clk => clk,
+                        rst => rst,
+                        links_in => calo_links_in,
+                        valid_in => calo_valid_in,
+                        calo_out => calo_out,
+                        newevent_out => calo_newevent_out);
+
+    mu_tdemux_decode_regionizer : entity work.muon_tdemux_decode_regionizer
+                   generic map(MU_ETA_CENTER => 460)
+                   port map(
+                        clk => clk,
+                        rst => rst,
+                        links_in => mu_links_in,
+                        valid_in => mu_valid_in,
+                        mu_out => mu_out,
+                        newevent_out => mu_newevent_out);
 
     input_link_pv: process(clk)
     begin
@@ -140,9 +147,9 @@ begin
                 pv_input_was_valid <= '0';
                 vtx_write360(0) <= '0';
             else
-                pv_input_was_valid <= valid_in(PV_LINK);
-                if valid_in(PV_LINK) = '1' and pv_input_was_valid = '0' then
-                    vtx360(0) <= links_in(PV_LINK);
+                pv_input_was_valid <= vtx_valid_in;
+                if vtx_valid_in = '1' and pv_input_was_valid = '0' then
+                    vtx360(0) <= vtx_link_in;
                     vtx_count360 <= 0;
                     vtx_write360(0) <= '1';
                 else
@@ -153,59 +160,10 @@ begin
                     end if;
                 end if;
             end if;
-            vtx_write360(PV_INITIAL_DELAY downto 1) <= vtx_write360(PV_INITIAL_DELAY-1downto 0);
-            vtx360(PV_INITIAL_DELAY downto 1) <= vtx360(PV_INITIAL_DELAY-1downto 0);
+            vtx_write360(PV_INITIAL_DELAY downto 1) <= vtx_write360(PV_INITIAL_DELAY-1 downto 0);
+            vtx360(PV_INITIAL_DELAY downto 1) <= vtx360(PV_INITIAL_DELAY-1 downto 0);
         end if;
     end process input_link_pv;
-
-    regionizer : entity work.full_regionizer_mux_stream
-        generic map(MU_ETA_CENTER => 460)
-        port map(ap_clk => clk, 
-                 ap_rst => rst, 
-                 ap_start => '1',
-                 tracks_start => regionizer_start,
-                 tracks_newevent => newevent,
-                 tracks_in_0_0_V => tk_in( 0),
-                 tracks_in_0_1_V => tk_in( 1),
-                 tracks_in_1_0_V => tk_in( 2),
-                 tracks_in_1_1_V => tk_in( 3), 
-                 tracks_in_2_0_V => tk_in( 4),
-                 tracks_in_2_1_V => tk_in( 5),
-                 tracks_in_3_0_V => tk_in( 6),
-                 tracks_in_3_1_V => tk_in( 7),
-                 tracks_in_4_0_V => tk_in( 8),
-                 tracks_in_4_1_V => tk_in( 9), 
-                 tracks_in_5_0_V => tk_in(10),
-                 tracks_in_5_1_V => tk_in(11),
-                 tracks_in_6_0_V => tk_in(12),
-                 tracks_in_6_1_V => tk_in(13),
-                 tracks_in_7_0_V => tk_in(14),
-                 tracks_in_7_1_V => tk_in(15), 
-                 tracks_in_8_0_V => tk_in(16),
-                 tracks_in_8_1_V => tk_in(17),
-                 calo_start => regionizer_start,
-                 calo_newevent => newevent,
-                 calo_in_0_0_V => calo_in( 0),
-                 calo_in_0_1_V => calo_in( 1),
-                 calo_in_0_2_V => calo_in( 2),
-                 calo_in_0_3_V => calo_in( 3), 
-                 calo_in_1_0_V => calo_in( 4),
-                 calo_in_1_1_V => calo_in( 5),
-                 calo_in_1_2_V => calo_in( 6),
-                 calo_in_1_3_V => calo_in( 7),
-                 calo_in_2_0_V => calo_in( 8),
-                 calo_in_2_1_V => calo_in( 9), 
-                 calo_in_2_2_V => calo_in(10),
-                 calo_in_2_3_V => calo_in(11),
-                 mu_start => regionizer_start,
-                 mu_newevent => newevent,
-                 mu_in_0_V => mu_in(0),
-                 mu_in_1_V => mu_in(1),
-                 tracks_out => tk_out,
-                 calo_out   => calo_out,
-                 mu_out     => mu_out,
-                 newevent_out => newevent_out
-             );
 
     regio2cdc: process(clk)
     begin
@@ -215,7 +173,8 @@ begin
                 regionizer_out_write  <= '0';
                 regionizer_done <= '0';
             else
-                if newevent_out = '1' then
+                assert tk_newevent_out = calo_newevent_out and tk_newevent_out = mu_newevent_out;
+                if tk_newevent_out = '1' then
                     -- if warmed up, start streaming out. otherwise, just warm up
                     if regionizer_out_warmup = '1' then
                         regionizer_count      <= 0;
@@ -356,8 +315,8 @@ begin
                         data  => puppi_out_unsorted(NTKSORTED-1 downto 0),
                         valid => puppi_valid_unsorted,
                         done  => puppi_done_unsorted,
-                        read  => puppi_read_unsorted,
-                        empty => puppi_empty_unsorted(NTKSTREAM-1 downto 0));
+                        read  => puppi_read,
+                        empty => puppi_empty(NTKSTREAM-1 downto 0));
      puppine_unpacker: entity work.cdc_and_deserializer
             generic map(NITEMS => NCALOSORTED, 
                         NSTREAM => NCALOSTREAM)
@@ -372,7 +331,7 @@ begin
                         valid => open,
                         done  => open,
                         read  => open,
-                        empty => puppi_empty_unsorted(NCALOSTREAM+NTKSTREAM-1 downto NTKSTREAM));
+                        empty => puppi_empty(NCALOSTREAM+NTKSTREAM-1 downto NTKSTREAM));
      puppi_start <= puppi_read360_start;
 
      -- Sort the puppi outputs
@@ -392,16 +351,4 @@ begin
     generic map(delay => SORT_LATENCY)
     port map(clk, '1', puppi_done_unsorted, puppi_done);
      
-    puppi_read_pipe: entity work.bit_delay
-    generic map(delay => SORT_LATENCY)
-    port map(clk, '1', puppi_read_unsorted, puppi_read);
-
-    gen_puppi_empty_pipe:
-    for i in 0 to NTKSTREAM+NCALOSTREAM-1 generate
-    begin
-        puppi_empty_pipe: entity work.bit_delay
-        generic map(delay => SORT_LATENCY)
-        port map(clk, '1', puppi_empty_unsorted(i), puppi_empty(i));
-    end generate;
-
 end Behavioral;
