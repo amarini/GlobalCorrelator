@@ -117,7 +117,7 @@ This setup runs the streaming regionizer at 360 MHz, transfers the data to the 2
 A vhdl testbench simulation in vivado can be run with `test/run_vhdltb.sh` run with `stream-cdc-pf-puppi` as argument.
  * The first PF & Puppi outputs arrive at frames 185 and 233 in the testbench output, compared to 54 in the reference from HLS (HLS has an ideal 54 clock cycle latency for the regionizer, to stream in the inputs, and zero latency for PF & Puppi)
 
-Resource usage from emp framework:
+Resource usage from emp framework (might be slightly out of date):
 |  Instance  |   Total LUTs   |   Logic LUTs   |   LUTRAMs   |     SRLs     |       FFs      |    RAMB36   |    RAMB18   |   URAM   | DSP48 Blocks |
 |------------|----------------|----------------|-------------|--------------|----------------|-------------|-------------|----------|--------------|
 | top        | 252272(21.34%) | 238213(20.15%) | 1754(0.30%) | 12305(2.08%) | 404120(17.09%) | 300(13.89%) | 906(20.97%) | 0(0.00%) | 1245(18.20%) |
@@ -146,7 +146,7 @@ Compared to `regionizer_stream_cdc_pf_puppi` :
 A vhdl testbench simulation in vivado can be run with `test/run_vhdltb.sh` run with `tdemux-stream-cdc-pf-puppi` as argument.
  * For the full set of inputs (30 tracks, 20 calo), the first PF & Puppi outputs arrive at frames 297 and 345 in the testbench output, compared to 54 in the reference from HLS (HLS has an ideal 54 clock cycle latency for the regionizer, to stream in the inputs, and zero latency for PF & Puppi). This estimate of the latency is conservative, as the code in the 360 MHz domain waits more before starting to read from the FIFOs.
 
-Resource usage from emp framework:
+Resource usage from emp framework (might be slightly out of date):
 
 |  Instance  |   Total LUTs   |   Logic LUTs   |   LUTRAMs   |     SRLs     |       FFs      |    RAMB36   |    RAMB18   |   URAM   | DSP48 Blocks |
 |------------|----------------|----------------|-------------|--------------|----------------|-------------|-------------|----------|--------------|
@@ -173,17 +173,39 @@ The whole Puppi logic is implemented with the above 3:
 The implementation requires to compile the new cores for the streaming puppi with  `make_hls_cores.sh puppiHGCal_240MHz_stream`.
 The full set of cores for this design is `pfHGCal_240MHz_ii4 puppiHGCal_240MHz_stream tdemux unpackers`
 
+The input pattern files are produced with `l1pf_hls/multififo_regionizer/run_hls_csim_pf_puppi_tm18.tcl`, as before.
+
 A VHDL testbench implementation can be run with  `run_vhdltb.sh tdemux-stream2-cdc-pf-puppi`:
  * For the full set of inputs (30 tracks, 20 calo), the first PF & Puppi outputs arrive at frames 297 and 345 in the testbench output, compared to 54 in the reference from HLS (HLS has an ideal 54 clock cycle latency for the regionizer, to stream in the inputs, and zero latency for PF & Puppi). This estimate of the latency is largely conservative, more than the previous design, as it's using the latency of the traditional Puppi algorithm which is longer.
 
-Resource usage from emp framework:
+Resource usage from emp framework (might be slightly out of date):
 |  Instance  |   Total LUTs   |   Logic LUTs   |   LUTRAMs   |     SRLs     |       FFs      |    RAMB36   |    RAMB18   |   URAM   | DSP48 Blocks |
 |------------|----------------|----------------|-------------|--------------|----------------|-------------|-------------|----------|--------------|
 | top        | 216875(18.34%) | 202242(17.11%) | 1754(0.30%) | 12879(2.18%) | 378775(16.02%) | 344(15.93%) | 981(22.71%) | 0(0.00%) | 1223(17.88%) |
 |   payload  | 166943(14.12%) | 154508(13.07%) |    0(0.00%) | 12435(2.10%) | 325713(13.78%) | 248(11.48%) |   85(1.97%) | 0(0.00%) | 1223(17.88%) |
 
 TODO:
+ * In order to complete the implementation successfully, one has to modify [emp-fwk/boards/vcu118/firmware/ucf/xdma_constraints.tcl](https://gitlab.cern.ch/p2-xware/firmware/emp-fwk/-/blob/master/boards/vcu118/firmware/ucf/xdma_constraints.tcl) changing `LOC PCIE40E4_X1Y0` to `LOC PCIE40E4_X1Y2` and commenting out the three `set_property USER_CLOCK_ROOT X5Y0`. This is being followed up with EMP framework authors
  * possibly recover some clock cycles
- * investigate and solve the timing pulse width failure in the PCIexpress
 
+#### `tdemux_regionizer_cdc_pf_puppi_stream_sort`: time demultiplexer + trivial decoder + `regionizer_stream` +  PF@240 + Puppi stream@240 + final sort 
+
+The change wrt `tdemux_regionizer_cdc_pf_puppi_stream` is to add a final sorting of the Puppi candidates to select the best 18 ones. The sorting uses [BitonicSort](https://gitlab.cern.ch/rufl/RuflCore/-/blob/master/firmware/hdl/ReuseableElements/BitonicSort.vhd) from the Rufl library.
+
+The full set of cores for this design is the same as before, `pfHGCal_240MHz_ii4 puppiHGCal_240MHz_stream tdemux unpackers`.
+
+The input pattern files are produced with `l1pf_hls/multififo_regionizer/run_hls_csim_pf_puppi_tm18.tcl`, as before. 
+
+A VHDL testbench implementation can be run using Modelsim with  `run_vhdltb.sh -vsim tdemux-stream2-cdc-pf-puppi-sort`, :
+ * For the full set of inputs (30 tracks, 20 calo), the first PF & Puppi outputs arrive at frames 297 and 366 in the testbench output, compared to 54 in the reference from HLS (HLS has an ideal 54 clock cycle latency for the regionizer, to stream in the inputs, and zero latency for PF & Puppi). 
+
+Resource usage from emp framework:
+|  Instance  |   Total LUTs   |   Logic LUTs   |   LUTRAMs   |     SRLs     |       FFs      |    RAMB36   |    RAMB18   |   URAM   | DSP48 Blocks |
+|------------|----------------|----------------|-------------|--------------|----------------|-------------|-------------|----------|--------------|
+| top        | 242042(20.47%) | 227361(19.23%) | 1754(0.30%) | 12927(2.18%) | 419909(17.76%) | 344(15.93%) | 981(22.71%) | 0(0.00%) | 1223(17.88%) |
+|   payload  | 187162(15.83%) | 174679(14.78%) |    0(0.00%) | 12483(2.11%) | 363038(15.35%) | 248(11.48%) |   85(1.97%) | 0(0.00%) | 1223(17.88%) |
+
+TODO:
+ * The sorting used in the reference output pattern files (`output-emp-puppisort-ref.txt`) is not equivalent to the bitonic one, and so in some events there's a mismatch in the order of the output Puppi candidates.
+ * As for the previous design, in order to complete the implementation successfully, one has to modify [emp-fwk/boards/vcu118/firmware/ucf/xdma_constraints.tcl](https://gitlab.cern.ch/p2-xware/firmware/emp-fwk/-/blob/master/boards/vcu118/firmware/ucf/xdma_constraints.tcl) changing `LOC PCIE40E4_X1Y0` to `LOC PCIE40E4_X1Y2` and commenting out the three `set_property USER_CLOCK_ROOT X5Y0`. This is being followed up with EMP framework authors.
 
