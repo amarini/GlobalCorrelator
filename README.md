@@ -206,6 +206,5 @@ Resource usage from emp framework:
 |   payload  | 187162(15.83%) | 174679(14.78%) |    0(0.00%) | 12483(2.11%) | 363038(15.35%) | 248(11.48%) |   85(1.97%) | 0(0.00%) | 1223(17.88%) |
 
 TODO:
- * The sorting used in the reference output pattern files (`output-emp-puppisort-ref.txt`) is not equivalent to the bitonic one, and so in some events there's a mismatch in the order of the output Puppi candidates.
- * As for the previous design, in order to complete the implementation successfully, one has to modify [emp-fwk/boards/vcu118/firmware/ucf/xdma_constraints.tcl](https://gitlab.cern.ch/p2-xware/firmware/emp-fwk/-/blob/master/boards/vcu118/firmware/ucf/xdma_constraints.tcl) changing `LOC PCIE40E4_X1Y0` to `LOC PCIE40E4_X1Y2` and commenting out the three `set_property USER_CLOCK_ROOT X5Y0`. This is being followed up with EMP framework authors.
+ * As for the previous design, in order to complete the implementation successfully, one has to modify [emp-fwk/boards/vcu118/firmware/ucf/xdma_constraints.tcl](https://gitlab.cern.ch/p2-xware/firmware/emp-fwk/-/blob/master/boards/vcu118/firmware/ucf/xdma_constraints.tcl) changing `LOC PCIE40E4_X1Y0` to `LOC PCIE40E4_X1Y2` and commenting out the three `set_property USER_CLOCK_ROOT X5Y0`. This is being followed up with EMP framework authors on [p2-xware gitlab](https://gitlab.cern.ch/p2-xware/firmware/emp-fwk/-/merge_requests/58).
 
