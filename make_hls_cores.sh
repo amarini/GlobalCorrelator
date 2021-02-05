@@ -75,6 +75,15 @@ while [[ "$1" != "" ]]; do
         cp -v l1pf_hls/multififo_regionizer/project_unpack_{hgcal_3to1,track_3to2,mu_3to12}/solution/impl/vhdl/* ip_cores_firmware/$core/firmware/hdl/ &&
         (cd ip_cores_firmware/$core/firmware/hdl && ls -1 ) | sed 's/^/src /' | tee ip_cores_firmware/$core/firmware/cfg/top.dep;
         ;;
+    bitonic_hybrid)
+        test -d ip_cores_firmware/$core && rm -r ip_cores_firmware/$core 2> /dev/null;
+        mkdir -p ip_cores_firmware/$core/firmware/{hdl,cfg} &&
+        pushd l1pf_hls/multififo_regionizer &&
+            (test -d project_puppi_sort || vivado_hls -f run_hls_synth_puppi_sort.tcl) &&
+            popd &&
+        cp -v l1pf_hls/multififo_regionizer/project_puppi_sort/solution/impl/vhdl/* ip_cores_firmware/$core/firmware/hdl/ &&
+        (cd ip_cores_firmware/$core/firmware/hdl && ls -1 ) | sed 's/^/src /' | tee ip_cores_firmware/$core/firmware/cfg/top.dep;
+        ;;
     *)
         echo "Unknown or unsupported core $core";
         exit 1;

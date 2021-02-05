@@ -23,6 +23,7 @@ include -c ip_cores_firmware:puppiHGCal_240MHz_stream_one top.dep
 include -c ip_cores_firmware:puppiHGCal_240MHz_stream_chs top.dep 
 include -c ip_cores_firmware:tdemux top.dep 
 include -c ip_cores_firmware:unpackers top.dep 
+include -c ip_cores_firmware:bitonic_hybrid top.dep
 
 include -c post_sort: post_sort.dep
 

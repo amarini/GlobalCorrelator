@@ -99,7 +99,8 @@ architecture Behavioral of tdemux_regionizer_cdc_pf_puppi_sort is
     signal puppi_valid_unsorted : std_logic := '0';
     signal puppi_empty_unsorted : std_logic_vector(NTKSTREAM+NCALOSTREAM-1 downto 0) := (others => '0');
 
-    constant SORT_LATENCY : integer := utilities.utilities.LatencyOfBitonicSort(puppi_out_unsorted'length, puppi_out'length);
+    --constant SORT_LATENCY : integer := utilities.utilities.LatencyOfBitonicSort(puppi_out_unsorted'length, puppi_out'length);
+    constant SORT_LATENCY : integer := 9;
 
     constant PV_INITIAL_DELAY : natural := 10; -- extra delay because FIFOs don't become writable immediately after rst goes down. 
                                                -- not sure how much, but 6 is too little and 10 is ok
@@ -335,20 +336,121 @@ begin
      puppi_start <= puppi_read360_start;
 
      -- Sort the puppi outputs
-     puppi_sort: entity work.sort_pfpuppi_cands
+     -- puppi_sort: entity work.sort_pfpuppi_cands
+     -- port map(
+     --    -- clk => clk,
+     --    d => puppi_out_unsorted,
+     --    q => puppi_out
+     -- );
+     -- -- delay the associated control signals by the sort latency
+     -- puppi_valid_pipe: entity work.bit_delay
+     -- generic map(delay => SORT_LATENCY)
+     -- port map(clk, '1', puppi_valid_unsorted, puppi_valid);
+
+     -- puppi_done_pipe: entity work.bit_delay
+     -- generic map(delay => SORT_LATENCY)
+     -- port map(clk, '1', puppi_done_unsorted, puppi_done);
+
+     puppi_sort: entity work.sort_pfpuppi_cands_hybrid
      port map(
-        clk => clk,
-        d => puppi_out_unsorted,
-        q => puppi_out
+        -- clk => clk,
+        ap_clk => clk,
+        --ap_rst => rst,
+        --ap_start => puppi_done_unsorted, -- ??
+        ap_rst => '0',
+        ap_start => '1', 
+        ap_done => puppi_done,
+        ap_idle => open,
+        ap_ready => open,
+        presort_0_V => puppi_out_unsorted (0),
+        presort_1_V => puppi_out_unsorted (1),
+        presort_2_V => puppi_out_unsorted (2),
+        presort_3_V => puppi_out_unsorted (3),
+        presort_4_V => puppi_out_unsorted (4),
+        presort_5_V => puppi_out_unsorted (5),
+        presort_6_V => puppi_out_unsorted (6),
+        presort_7_V => puppi_out_unsorted (7),
+        presort_8_V => puppi_out_unsorted (8),
+        presort_9_V => puppi_out_unsorted (9),
+        presort_10_V => puppi_out_unsorted (10),
+        presort_11_V => puppi_out_unsorted (11),
+        presort_12_V => puppi_out_unsorted (12),
+        presort_13_V => puppi_out_unsorted (13),
+        presort_14_V => puppi_out_unsorted (14),
+        presort_15_V => puppi_out_unsorted (15),
+        presort_16_V => puppi_out_unsorted (16),
+        presort_17_V => puppi_out_unsorted (17),
+        presort_18_V => puppi_out_unsorted (18),
+        presort_19_V => puppi_out_unsorted (19),
+        presort_20_V => puppi_out_unsorted (20),
+        presort_21_V => puppi_out_unsorted (21),
+        presort_22_V => puppi_out_unsorted (22),
+        presort_23_V => puppi_out_unsorted (23),
+        presort_24_V => puppi_out_unsorted (24),
+        presort_25_V => puppi_out_unsorted (25),
+        presort_26_V => puppi_out_unsorted (26),
+        presort_27_V => puppi_out_unsorted (27),
+        presort_28_V => puppi_out_unsorted (28),
+        presort_29_V => puppi_out_unsorted (29),
+        presort_30_V => puppi_out_unsorted (30),
+        presort_31_V => puppi_out_unsorted (31),
+        presort_32_V => puppi_out_unsorted (32),
+        presort_33_V => puppi_out_unsorted (33),
+        presort_34_V => puppi_out_unsorted (34),
+        presort_35_V => puppi_out_unsorted (35),
+        presort_36_V => puppi_out_unsorted (36),
+        presort_37_V => puppi_out_unsorted (37),
+        presort_38_V => puppi_out_unsorted (38),
+        presort_39_V => puppi_out_unsorted (39),
+        presort_40_V => puppi_out_unsorted (40),
+        presort_41_V => puppi_out_unsorted (41),
+        presort_42_V => puppi_out_unsorted (42),
+        presort_43_V => puppi_out_unsorted (43),
+        presort_44_V => puppi_out_unsorted (44),
+        presort_45_V => puppi_out_unsorted (45),
+        presort_46_V => puppi_out_unsorted (46),
+        presort_47_V => puppi_out_unsorted (47),
+        presort_48_V => puppi_out_unsorted (48),
+        presort_49_V => puppi_out_unsorted (49),
+        sorted_0_V => puppi_out (0),
+        sorted_1_V => puppi_out (1),
+        sorted_2_V => puppi_out (2),
+        sorted_3_V => puppi_out (3),
+        sorted_4_V => puppi_out (4),
+        sorted_5_V => puppi_out (5),
+        sorted_6_V => puppi_out (6),
+        sorted_7_V => puppi_out (7),
+        sorted_8_V => puppi_out (8),
+        sorted_9_V => puppi_out (9),
+        sorted_10_V => puppi_out (10),
+        sorted_11_V => puppi_out (11),
+        sorted_12_V => puppi_out (12),
+        sorted_13_V => puppi_out (13),
+        sorted_14_V => puppi_out (14),
+        sorted_15_V => puppi_out (15),
+        sorted_16_V => puppi_out (16),
+        sorted_17_V => puppi_out (17),
+        sorted_0_V_ap_vld => open,
+        sorted_1_V_ap_vld => open,
+        sorted_2_V_ap_vld => open,
+        sorted_3_V_ap_vld => open,
+        sorted_4_V_ap_vld => open,
+        sorted_5_V_ap_vld => open,
+        sorted_6_V_ap_vld => open,
+        sorted_7_V_ap_vld => open,
+        sorted_8_V_ap_vld => open,
+        sorted_9_V_ap_vld => open,
+        sorted_10_V_ap_vld => open,
+        sorted_11_V_ap_vld => open,
+        sorted_12_V_ap_vld => open,
+        sorted_13_V_ap_vld => open,
+        sorted_14_V_ap_vld => open,
+        sorted_15_V_ap_vld => open,
+        sorted_16_V_ap_vld => open,
+        sorted_17_V_ap_vld => puppi_valid
+        --d => puppi_out_unsorted
+        --q => puppi_out
      );
 
-    -- delay the associated control signals by the sort latency
-    puppi_valid_pipe: entity work.bit_delay
-    generic map(delay => SORT_LATENCY)
-    port map(clk, '1', puppi_valid_unsorted, puppi_valid);
-
-    puppi_done_pipe: entity work.bit_delay
-    generic map(delay => SORT_LATENCY)
-    port map(clk, '1', puppi_done_unsorted, puppi_done);
      
 end Behavioral;
